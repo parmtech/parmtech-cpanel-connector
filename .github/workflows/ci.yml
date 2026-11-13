@@ -1,0 +1,44 @@
+name: Connector source checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: test_operator
+          POSTGRES_PASSWORD: fixture-only-not-a-real-secret
+          POSTGRES_DB: connector_tests
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U test_operator -d connector_tests"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGUSER: test_operator
+      PGPASSWORD: fixture-only-not-a-real-secret
+      PGDATABASE: connector_tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: sudo apt-get update && sudo apt-get install -y libsecret-1-0
+      - run: npm ci
+      - run: npm test
+      - run: npm run test:setup-db
+      - run: python -m pip install -r docs/requirements.txt
+      - run: python scripts/render-docs.py
+      - run: python scripts/build-distribution.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: connector-source-bundle
+          path: outputs/PARMTECH-cPanel-Connector-*/**

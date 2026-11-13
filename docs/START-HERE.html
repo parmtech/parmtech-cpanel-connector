@@ -1,0 +1,307 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PARMTECH Connector · Setup and User Guide</title><style>*{box-sizing:border-box}body{font:16px/1.75 system-ui,"Nirmala UI",sans-serif;margin:0;background:#f0f5fa;color:#182939}header{background:#112e46;color:#fff;padding:42px max(5vw,20px)}header h1{line-height:1.2;max-width:1000px}main{max-width:1080px;margin:28px auto;padding:32px;background:#fff;border:1px solid #d6e2ec;border-radius:16px}h2{margin-top:46px;padding-top:18px;border-top:1px solid #d8e3ee;color:#105268}h3{color:#15546b}a{color:#00698b}pre{padding:18px;background:#102638;color:#e5f6ff;border-radius:8px;overflow:auto;font-size:14px;line-height:1.6}code{overflow-wrap:anywhere}table{border-collapse:collapse;width:100%;margin:20px 0;font-size:14px}th,td{border:1px solid #ccdbe6;text-align:left;padding:12px;vertical-align:top}th{background:#e9f4f8}li{margin-bottom:9px}.toc{padding:18px;background:#edf5fa;border-radius:10px}footer{padding:20px;text-align:center;color:#54677a}@media(max-width:700px){main{margin:12px;padding:18px}table{display:block;overflow:auto}header{padding:28px 20px}}@media print{body{background:white}header{background:white;color:#112e46;padding:10px}main{border:0;margin:0;padding:0;max-width:none}pre{white-space:pre-wrap;color:#102638;background:#eee}h2{break-after:avoid}table{font-size:11px}}</style></head><body><header><p>PARMTECH · cPanel / WHM · MCP</p><h1>Setup, Login &amp; Complete User Guide</h1><p>Version0.2.0-alpha.2 · English &amp; ਪੰਜਾਬੀ · Owner-restricted hosted alpha</p></header><main><h1 id="setup-login">ਪਹਿਲੀ setup ਅਤੇ login — ਪੰਜਾਬੀ</h1>
+<h2 id="login">ਤੁਹਾਡਾ login</h2>
+<p>ਹੁਣ ਖੋਲ੍ਹੋ: <strong>https://connector.parmtech.au/mani_admin</strong></p>
+<p>ਪਹਿਲੀ ਵਾਰੀ <strong>First-time admin setup</strong> ਆਵੇਗੀ। Email <strong>info@parmtech.au</strong> ਪਾਓ। Email ਵਿੱਚ ਆਇਆ8ਅੰਕਾਂ ਵਾਲਾ code ਉਸੇ browser tab ਵਿੱਚ ਪਾਓ। ਫਿਰ ਆਪਣਾ ਨਵਾਂ password ਬਣਾਓ ਅਤੇ ਦੁਬਾਰਾ ਲਿਖ ਕੇ confirm ਕਰੋ। ਕੋਈ default password ਨਹੀਂ ਹੈ। ਮੈਂ ਤੁਹਾਡਾ password ਬਣਾਇਆ ਜਾਂ chat ਵਿੱਚ ਰੱਖਿਆ ਨਹੀਂ ਹੈ।</p>
+<p>ਉਸ ਤੋਂ ਬਾਅਦ ਇਸੇ URL ’ਤੇ ਆਪਣਾ email ਅਤੇ ਬਣਾਇਆ password ਪਾ ਕੇ login ਕਰੋ। Setup ਮੁੜ ਨਹੀਂ ਆਉਣੀ ਚਾਹੀਦੀ। ਇਹ connector ਦਾ login ਹੈ—cPanel ਜਾਂ ChatGPT ਦਾ password ਨਹੀਂ।</p>
+<p>Code15ਮਿੰਟ ਲਈ ਹੈ। ਪੰਜ ਗਲਤ ਕੋਸ਼ਿਸ਼ਾਂ ਤੋਂ ਬਾਅਦ ਨਵਾਂ code ਮੰਗੋ। ਪੰਦਰਾਂ ਮਿੰਟਾਂ ਵਿੱਚ ਵੱਧ ਤੋਂ ਵੱਧ ਤਿੰਨ codes ਮੰਗ ਸਕਦੇ ਹੋ। ਜਿਸ browser ਵਿੱਚ setup ਸ਼ੁਰੂ ਕੀਤੀ, ਉਸੇ ਵਿੱਚ ਪੂਰੀ ਕਰੋ। Code/password chat ਵਿੱਚ ਨਾ ਪਾਓ।</p>
+<p>ਸਿਰਫ਼ <code>connector.parmtech.au</code> ਖੋਲ੍ਹਣ ’ਤੇ official <code>parmtech.au</code> website ਖੁੱਲੇਗੀ। ਵੱਖਰਾ connector public frontend ਨਹੀਂ ਹੈ।</p>
+<h2 id="cpanel">cPanel ਕਿਵੇਂ ਜੁੜੇਗਾ?</h2>
+<p>ਇਸ owner installation ਵਿੱਚ ਪਹਿਲਾਂ ਸੇਵ ਕੀਤਾ cPanel account, <strong>info@parmtech.au</strong> verify ਕਰਕੇ sign in ਕਰਨ ਤੋਂ ਬਾਅਦ ਇੱਕ ਵਾਰੀ migrate ਹੋ ਸਕਦਾ ਹੈ। ਆਪਣਾ account disconnect ਕਰਨ ’ਤੇ ਉਹ ਚੁੱਪਚਾਪ ਦੁਬਾਰਾ ਨਹੀਂ ਜੋੜਿਆ ਜਾਵੇਗਾ। ਕਿਸੇ ਹੋਰ self-hosting user ਨੂੰ ਤੁਹਾਡੇ credentials ਨਹੀਂ ਮਿਲਣਗੇ।</p>
+<p>ਨਵਾਂ account ਜੋੜਨਾ ਹੋਵੇ ਤਾਂ label, server hostname, cPanel username ਅਤੇ ਅਸਲੀ API token secure form ਵਿੱਚ ਪਾਓ। Token ਦਾ name ਅਤੇ token ਦੀ value ਵੱਖਰੀਆਂ ਚੀਜ਼ਾਂ ਹਨ।</p>
+<h2 id="chatgptcodex">ChatGPT/Codex ਨਾਲ ਵਰਤਣਾ</h2>
+<p>Remote MCP URL: <code>https://connector.parmtech.au/mcp</code></p>
+<p>Client ਵਿੱਚ ਇਹ URL ਜੋੜ ਕੇ OAuth login ਅਤੇ permissions approve ਕਰੋ। <code>/mcp</code> ਆਮ web page ਨਹੀਂ ਹੈ। Browser ਵਾਲਾ admin URL <code>/mani_admin</code> ਹੈ। ਪੁਰਾਣਾ Local plugin ਆਪਣੇ ਆਪ hosted plugin ਨਹੀਂ ਬਣਦਾ।</p>
+<p>ਹੁਣ server-side service ਲਈ PC ਚਾਲੂ ਰੱਖਣ ਦੀ ਲੋੜ ਨਹੀਂ। Hosting ਚੱਲਦੀ ਹੋਵੇ ਤਾਂ connector ਉੱਥੋਂ ਕੰਮ ਕਰੇਗਾ। Saved credentials PostgreSQL ਵਿੱਚ encrypted ਹਨ ਅਤੇ encryption key private file ਵਿੱਚ stable ਰਹਿੰਦੀ ਹੈ। Server restart ’ਤੇ ਨਵੀਂ key ਨਹੀਂ ਬਣਦੀ। Client ਦਾ login expire ਹੋਣਾ ਅਤੇ cPanel token ਮਿਟਣਾ ਵੱਖਰੀਆਂ ਗੱਲਾਂ ਹਨ।</p>
+<h2 id="zip">ZIP ਵਿੱਚ ਕੀ ਹੈ?</h2>
+<p>ਪੂਰਾ source, cPanel/Docker setup, config templates, tests, plugin manifests, prebuilt server package ਅਤੇ English/Punjabi documentation। <strong>START-HERE.html</strong> browser ਵਿੱਚ ਖੋਲ੍ਹੋ। ਆਪਣੇ actual passwords, tokens, database ਜਾਂ SSL private keys ZIP ਵਿੱਚ ਨਹੀਂ ਹਨ।</p>
+<p>ਦੂਜਾ ਬੰਦਾ self-host ਕਰੇ ਤਾਂ ਉਸਨੂੰ ਆਪਣਾ domain, owner email, PostgreSQL ਅਤੇ mail setup ਕਰਨਾ ਪਵੇਗਾ। ਤੁਹਾਡਾ live endpoint ਹਾਲੇ owner-restricted ਹੈ। GitHub ’ਤੇ source ਰੱਖਣਾ ਅਤੇ ChatGPT public directory ਵਿੱਚ approve ਹੋਣਾ ਵੱਖਰੇ ਕਦਮ ਹਨ।</p><h1 id="parmtech-cpanel-connector-complete-setup-and-user-guide">PARMTECH cPanel Connector — complete setup and user guide</h1>
+<p>Version: 0.2.0-alpha.2 · Prepared 13 November 2026</p>
+<h2 id="1-what-is-in-this-project">1. What is in this project?</h2>
+<p>This connector lets an OAuth-capable MCP client manage user-authorized cPanel UAPI and WHM API1 accounts. It includes a hosted Node.js server, PostgreSQL storage, first-time administrator setup, a private settings portal, OAuth/PKCE, remote plugin manifests, a Windows/local development prototype and deployment tools.</p>
+<p>The current PARMTECH installation is an owner-restricted alpha. Open-source distribution and a public multi-user hosted service are different things. Anyone may self-host the source under its MIT licence; the PARMTECH production endpoint is not automatically open for everybody to register.</p>
+<p>The separate <code>parmtech/cpanel-admin</code> GitHub repository is an Android Flutter companion. It is not this Node/MCP server, and its APK is not included or silently integrated here.</p>
+<h2 id="2-which-login-is-which">2. Which login is which?</h2>
+<table>
+<thead>
+<tr>
+<th>Login</th>
+<th>Purpose</th>
+<th>What you enter</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Connector administrator</td>
+<td>Manage this connector installation and your saved hosting profiles</td>
+<td>Your verified owner email and the new password you create during setup</td>
+</tr>
+<tr>
+<td>cPanel/WHM hosting profile</td>
+<td>Permit hosting API operations</td>
+<td>Server hostname, hosting username and API token; password authentication is also supported where permitted by the host</td>
+</tr>
+<tr>
+<td>ChatGPT/Codex or another MCP client</td>
+<td>Authorize that client to use connector tools</td>
+<td>Your normal client account plus the connector OAuth consent flow</td>
+</tr>
+</tbody>
+</table>
+<p>There is no built-in shared administrator password. Do not use your email mailbox password, ChatGPT password or cPanel password as an assumed connector password. The first-time wizard creates a new connector login. Passwords are stored as scrypt hashes; saved hosting secrets are encrypted separately.</p>
+<p>For the current owner installation, use <code>info@parmtech.au</code>. The password is whatever the owner chooses in the wizard. No password is included in this ZIP or documentation.</p>
+<h2 id="3-current-urls">3. Current URLs</h2>
+<table>
+<thead>
+<tr>
+<th>URL</th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>https://connector.parmtech.au/</code></td>
+<td>Redirects to the official <code>https://parmtech.au/</code> website</td>
+</tr>
+<tr>
+<td><code>https://connector.parmtech.au/mani_admin</code></td>
+<td>First-time setup, then normal connector login/settings</td>
+</tr>
+<tr>
+<td><code>https://connector.parmtech.au/mcp</code></td>
+<td>Remote MCP endpoint for a client; not a normal web page</td>
+</tr>
+<tr>
+<td><code>https://connector.parmtech.au/health</code></td>
+<td>Service health response</td>
+</tr>
+</tbody>
+</table>
+<p>There is no separate public marketing frontend on the connector host. OAuth metadata and authorization routes remain reachable because clients need them. Knowing the admin URL does not grant access.</p>
+<p>Self-hosters replace these hostnames with their own. Use lowercase <code>/mani_admin</code> exactly; it contains an underscore, not a space.</p>
+<h2 id="4-first-time-administrator-setup">4. First-time administrator setup</h2>
+<ol>
+<li>Open <code>/mani_admin</code> over HTTPS.</li>
+<li>Enter the owner email configured by the installer in <code>SETUP_OWNER_EMAIL</code>.</li>
+<li>Press <strong>Send verification code</strong>. Read the eight-digit code in that mailbox.</li>
+<li>Keep the original browser tab open. Enter the code, a new password of12–256 characters, and its confirmation.</li>
+<li>Press <strong>Create admin login</strong>. The email is verified and the first administrator is created atomically.</li>
+<li>Later visits show the normal email/password login instead of first-time setup.</li>
+</ol>
+<p>The code expires after15minutes, is bound to the requesting browser and permits at most5wrong code attempts. At most3setup codes per owner email can be requested in15minutes. Concurrent setup submissions cannot create two initial administrators. A random first website visitor cannot choose an unrelated mailbox and claim the installation.</p>
+<p>The trusted setup email is chosen during server installation, not by an unauthenticated visitor. A self-hoster supplies their own email in the private configuration. If mail delivery is not configured, setup does not create an administrator without verification.</p>
+<p>An owner email change after setup does not reset the existing administrator. Do not erase the database to change a password. Automated password-recovery UI is not included in this alpha; recovery requires an authenticated operator procedure and must be completed before a general public hosted launch.</p>
+<h2 id="5-add-or-migrate-a-hosting-connection">5. Add or migrate a hosting connection</h2>
+<p>After login, choose <strong>Add another connection</strong> and fill in:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Example or meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Connection label</td>
+<td>A friendly name such as <code>My hosting</code></td>
+</tr>
+<tr>
+<td>Server hostname</td>
+<td><code>server.yourhost.com</code>; no cPanel session path such as <code>/cpsess...</code></td>
+</tr>
+<tr>
+<td>Hosting username</td>
+<td>The cPanel or WHM account name, not the connector email</td>
+</tr>
+<tr>
+<td>Access level</td>
+<td>cPanel account or WHM server</td>
+</tr>
+<tr>
+<td>Credential type</td>
+<td>API token, or username/password if the hosting policy permits</td>
+</tr>
+<tr>
+<td>Secret</td>
+<td>Enter only into the masked HTTPS form</td>
+</tr>
+<tr>
+<td>Token name</td>
+<td>Optional descriptive token name; it is not the token value</td>
+</tr>
+</tbody>
+</table>
+<p>cPanel uses HTTPS2083; WHM uses HTTPS2087. A hosting provider can restrict API permissions or password authentication. WHM can affect multiple accounts; use it deliberately. The connector validates the credential before saving it. Use dedicated credentials appropriate to the hosting account.</p>
+<p>In the current PARMTECH owner migration, the previously saved cPanel connection can be imported once after the configured owner has verified and signed in. The browser never receives that saved token. A receipt prevents an intentionally disconnected connection from being silently restored. Other self-hosters do not receive PARMTECH credentials, and this optional migration is not enabled in the public example configuration.</p>
+<h2 id="6-connect-an-mcp-client">6. Connect an MCP client</h2>
+<p>The protocol is <strong>Streamable HTTP with OAuth</strong>. Give the client the <code>/mcp</code> URL, start authorization, sign into the connector and review its scopes. Select read-only scopes when writes are not needed. The <code>offline_access</code> scope permits rotating refresh tokens.</p>
+<p>For Codex, the installed CLI supports:</p>
+<pre><code class="language-sh">codex mcp add parmtech_hosted --url https://YOUR-CONNECTOR-HOST/mcp
+codex mcp login parmtech_hosted --scopes accounts:read,accounts:write,cpanel:read,cpanel:write,offline_access
+</code></pre>
+<p>The first command can itself begin login. Complete the browser flow before its callback expires; if it expires, restart login. No cPanel token belongs in these commands or chat. The existing local plugin does not automatically switch to a remote server.</p>
+<p>For ChatGPT, use the current supported custom-MCP/plugin creation flow for your account or workspace and select OAuth. Menu names and availability depend on the product. This source package is not proof of public directory approval. See <a href="https://developers.openai.com/api/docs/guides/custom-mcp-server">OpenAI's custom MCP guide</a> and <a href="https://help.openai.com/en/articles/12584461">developer-mode documentation</a>.</p>
+<p>The private owner remote manifest uses the live PARMTECH endpoint. A public self-hosting package uses an example endpoint that the installer must replace. A GET request opening <code>/mcp</code> in a browser may return405 because the MCP endpoint expects protocol POST requests; use <code>/mani_admin</code> for a web login.</p>
+<h2 id="7-use-the-connector">7. Use the connector</h2>
+<p>Start with read-only prompts such as “List my connected hosting profiles”, “List domains on my cPanel account” or “List files in public_html”. Select the intended account when multiple profiles exist. Changes such as mailbox deletion or unrestricted UAPI/WHM calls require the corresponding write grant and the client’s own action policies.</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cpanel_list_accounts</code></td>
+<td>List profile metadata, never saved secrets</td>
+</tr>
+<tr>
+<td><code>cpanel_list_domains</code></td>
+<td>Read domains</td>
+</tr>
+<tr>
+<td><code>cpanel_list_email_accounts</code></td>
+<td>Read mailboxes</td>
+</tr>
+<tr>
+<td><code>cpanel_list_files</code></td>
+<td>Read a directory listing</td>
+</tr>
+<tr>
+<td><code>cpanel_create_email_account</code> / <code>cpanel_delete_email_account</code></td>
+<td>Manage mailboxes</td>
+</tr>
+<tr>
+<td><code>cpanel_uapi_execute</code></td>
+<td>Broad hosting UAPI operations</td>
+</tr>
+<tr>
+<td><code>whm_api_read</code> / <code>whm_api_execute</code></td>
+<td>WHM reads or broad server operations</td>
+</tr>
+<tr>
+<td><code>hosting_disconnect_connection</code></td>
+<td>Remove that owner's encrypted saved profile</td>
+</tr>
+</tbody>
+</table>
+<p>Available operations depend on the actual hosting credential. The connector does not grant privileges absent from cPanel/WHM. A disconnected OAuth client and a removed cPanel profile are different actions. Remote token revocation is separate and requires a saved token name and appropriate hosting permission.</p>
+<h2 id="8-install-on-cpanel-hosting">8. Install on cPanel hosting</h2>
+<p>You need Node22.19or newer, supported Passenger/Node application hosting, PostgreSQL, an HTTPS hostname and working SMTP or local sendmail. cPanel software availability depends on the host and plan. Check the real account rather than assuming every cPanel server supports Node/PostgreSQL. The current owner's plan was checked.</p>
+<ol>
+<li>Extract the full project ZIP on your computer. Find <code>packages/cpanel-server.zip</code>.</li>
+<li>Create a dedicated PostgreSQL database and a separate database user. Grant that user access. On hosts that disallow a database and user with the same name, use distinct names. Preserve any account prefix.</li>
+<li>Create a new connector subdomain with its own document root. Do not replace another site's public_html.</li>
+<li>Use cPanel <strong>Setup Node.js App</strong>: Node22+, production mode, an application directory outside the public document root, root application URI and startup file <code>app.js</code>.</li>
+<li>Extract <code>cpanel-server.zip</code> into that application directory and run the selector's <strong>NPM Install</strong> action. Do not upload Windows node_modules.</li>
+<li>Copy <code>deploy/cpanel/runtime.example.json</code> to a private input file outside the application and public web roots. Replace its example URLs, owner email, database names/password and mail values.</li>
+<li>From the full source checkout, initialize the private file once:</li>
+</ol>
+<pre><code class="language-sh">node scripts/init-hosted-config.mjs --input /home/ACCOUNT/private/input.json --output /home/ACCOUNT/private/runtime.json
+</code></pre>
+<p>The input and its containing folder must be private. The parent output folder must be owner-only0700 on Linux; the runtime file is0600. The script generates the encryption key once, prints no key and refuses to overwrite an existing file. Securely dispose of the redundant private input after checking the resulting configuration.</p>
+<ol>
+<li>Set the Node app environment variable <code>PARMTECH_CONFIG_FILE</code> to that absolute private runtime file. Do not put actual keys in the startup source, repository or public document root.</li>
+<li>Configure trusted reverse-proxy handling for the actual host, enable HTTPS and HTTP-to-HTTPS redirect, then restart the app using the supported manager.</li>
+<li>Check <code>/health</code>, OAuth metadata and anonymous MCP rejection. Open <code>/mani_admin</code> and complete owner setup.</li>
+</ol>
+<p>The application root is CommonJS for Passenger's startup loader; <code>dist</code> is ESM. Passenger requires the startup module rather than executing it as the main script, so startup must not depend on <code>require.main === module</code>.</p>
+<p>Some shared hosts reject Docker and persistent custom daemons. Use their managed Node app facility. Passenger may idle the process and restart it on demand; data persists in PostgreSQL/private files, so Windows need not remain powered on.</p>
+<h2 id="9-install-with-docker-on-a-suitable-server">9. Install with Docker on a suitable server</h2>
+<ol>
+<li>Install a supported Docker/Compose runtime and a TLS reverse proxy on your own suitable host.</li>
+<li>Copy <code>.env.example</code> to a private <code>.env</code>. Set the HTTPS base URL, official-site redirect, owner email, a strong database password and working SMTP values.</li>
+<li>Generate a32-byte base64 encryption key once using a password manager or Node's cryptographic random generator, store it in that private environment file and keep it unchanged across restarts.</li>
+<li>Run:</li>
+</ol>
+<pre><code class="language-sh">docker compose up -d --build
+</code></pre>
+<ol>
+<li>The app binds locally on port3210. Put the authenticated HTTPS reverse proxy in front; keep PostgreSQL private and preserve its named volume.</li>
+<li>Run health checks and complete <code>/mani_admin</code> setup.</li>
+</ol>
+<p>The Compose app filesystem is read-only and database state is in a persistent volume. SMTP is normally needed because the app container does not include a local mail server. The optional PARMTECH-specific import is disabled unless an operator explicitly configures it.</p>
+<h2 id="10-lets-encrypt-and-renewal">10. Let’s Encrypt and renewal</h2>
+<p>The current installation has a Let’s Encrypt certificate on <code>connector.parmtech.au</code>, with daily server-side renewal checks. No Windows task is used. The initial certificate is valid through10February2027.</p>
+<p>For another installation, configure <code>CPANEL_DNS_ZONE</code> to the actual authoritative cPanel zone, and use <code>scripts/configure-ssl-renewal.mjs</code> with private runtime and private cPanel credential input files. The credential input format is <code>host</code>, <code>username</code>, <code>apiToken</code>; never include an actual input in this project ZIP. The script creates an AES-GCM-encrypted <code>ssl-auth.enc</code> next to the private runtime file and refuses overwriting it.</p>
+<pre><code class="language-sh">node scripts/configure-ssl-renewal.mjs --config /home/ACCOUNT/private/runtime.json --credentials /home/ACCOUNT/private/cpanel-input.json --output /home/ACCOUNT/private/ssl-auth.enc
+</code></pre>
+<p>Install the Node dependencies, then schedule the included renewer using the real node path. For the unpacked cPanel runtime package, an example daily command is:</p>
+<pre><code class="language-sh">PARMTECH_OPERATIONS_DIR=/home/ACCOUNT/private /path/to/node /home/ACCOUNT/connector-app/renew-ssl.mjs
+</code></pre>
+<p>The private runtime supplies the hostname and DNS zone. DNS-01 adds/removes only the exact challenge record. The certificate and ACME account key persist in private storage. The renewer renews within30days of expiry and installs through cPanel. Do not create a new ACME account or certificate every few minutes. Set a private log/monitor for nonzero exit status; the current installation also has a Punjabi failure-email wrapper.</p>
+<p>Other hosts may provide automatic certificates themselves; use their supported certificate process if the required DNS/SSL APIs are unavailable. Do not disable TLS verification as a workaround.</p>
+<h2 id="11-keep-credentials-across-restarts-and-updates">11. Keep credentials across restarts and updates</h2>
+<p>Back up the PostgreSQL database and the stable encryption key/private runtime configuration securely, independently of replaceable application files. Restoring only the database without its original key will not recover encrypted profiles. Replacing the key is not a password reset.</p>
+<p>For updates, back up state, replace only application code, install the matching dependencies, restart through the host manager and check health/login/read-only tools. Do not delete tables, the private configuration or owner-import receipts. Keep old application code for rollback; review migrations before downgrading. An app/server restart does not intentionally delete saved hosting credentials.</p>
+<p>OAuth access tokens last about1hour; rotating refresh grants last30days. An expired/revoked client grant may need browser login again, while the saved hosting profile can still remain intact. A hosting API token that expires or is revoked must be replaced deliberately.</p>
+<h2 id="12-local-windows-prototype">12. Local Windows prototype</h2>
+<p>The local mode is useful for development or desktop-only use. With Node22.19+ installed, run <code>npm ci</code> and <code>npm run build</code> in the extracted full source folder first. Then run <code>Setup cPanel Connection.cmd</code>, enter the credential in its loopback browser form and save it to Windows Credential Manager. <code>Enable Automatic Startup.cmd</code> starts its loopback HTTP process after that same Windows user logs in. That local mode still depends on the PC; it is not the hosted24/7 route.</p>
+<p>Never expose the unauthenticated loopback development endpoint publicly. The running old plugin can retain outdated code until it is reloaded/reinstalled; replacing source files alone may not refresh that installed process.</p>
+<h2 id="13-troubleshooting">13. Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>What to check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Admin link opens first-time setup</td>
+<td>No initial admin has completed verified setup yet</td>
+</tr>
+<tr>
+<td>Setup code does not arrive</td>
+<td>Installer owner email, SMTP/sendmail, spam folder and private mail-delivery logs</td>
+</tr>
+<tr>
+<td>Setup code rejected</td>
+<td>Original tab/browser,15minute expiry, correct8digits and five-attempt limit</td>
+</tr>
+<tr>
+<td>Wrong owner email</td>
+<td>Match <code>SETUP_OWNER_EMAIL</code>; a public visitor cannot choose another first admin</td>
+</tr>
+<tr>
+<td>Login callback timed out</td>
+<td>Start a fresh client OAuth login; do not regenerate cPanel credentials</td>
+</tr>
+<tr>
+<td><code>/mcp</code> shows405 in browser</td>
+<td>Use it in an MCP client; open <code>/mani_admin</code> for the web UI</td>
+</tr>
+<tr>
+<td>Invalid UAPI response</td>
+<td>Correct cPanel host/2083 and an updated response parser; not proof that a token was erased</td>
+</tr>
+<tr>
+<td>Saved credential cannot decrypt</td>
+<td>Restore the original encryption key paired with that database backup</td>
+</tr>
+<tr>
+<td>Passenger503</td>
+<td>Startup module loading, Node version, private-file permissions, installed packages and database access</td>
+</tr>
+<tr>
+<td>PostgreSQL user-creation error</td>
+<td>Database/user name conflicts, required account prefixes and grants</td>
+</tr>
+<tr>
+<td>Root shows official website</td>
+<td>Expected; there is no connector marketing frontend</td>
+</tr>
+<tr>
+<td>Owner migration re-add concern</td>
+<td>A durable receipt preserves intentional disconnects</td>
+</tr>
+</tbody>
+</table>
+<h2 id="14-public-github-website-and-chatgpt-distribution">14. Public GitHub, website and ChatGPT distribution</h2>
+<p>The full distribution includes source, build/test scripts, operator/user documentation, a server runtime ZIP, remote manifests, MIT licence and SHA256/file manifests. It excludes actual hosting credentials, database dumps, private keys, owner receipts, local work directories, Windows credential data and node_modules.</p>
+<p>The source repository is https://github.com/parmtech/parmtech-cpanel-connector, separate from the Android Flutter project. Run the tests, secret/content checks and dependency review before every release. The included CI template uses fixture credentials and PostgreSQL in an isolated test service. A website can link the checked source/release ZIP and checksum after owner review; do not publish a live <code>.env</code> or private runtime backup.</p>
+<p>Public ChatGPT distribution is a separate submission/review process, not a consequence of creating a GitHub repository or ZIP. Review current <a href="https://developers.openai.com/plugins/quickstart">plugin guidance</a>, <a href="https://developers.openai.com/apps-sdk/deploy/submission/">Apps SDK submission guidance</a> and the platform's actual integration path. Prepare working reviewer access, accurate tool scopes, privacy/support/terms pages, ownership/branding and failure/revocation tests. No public ChatGPT listing or directory approval is claimed.</p>
+<p>Before opening a general public hosted service, complete independent security/tenant-isolation review, password recovery, monitoring, backup/restore drills, abuse controls and real cPanel/WHM acceptance. The current production owner allowlist remains unchanged.</p>
+<h2 id="15-validation-and-limits">15. Validation and limits</h2>
+<p>Build and mock/local/config/owner-import tests run using <code>npm test</code>. Real PostgreSQL first-admin tests use <code>npm run test:setup-db</code> against an operator-controlled connection; they create and drop a uniquely named test schema, never the live public schema.</p>
+<p>The current first-admin database tests cover browser binding, expiry, five wrong attempts, send throttling, concurrent setup, closure after one admin, password hashing and reconnecting through a fresh pool. HTTP checks reject bad CSRF/wrong-owner requests without sending mail. Final owner email receipt, chosen password and client authorization remain user acceptance steps, not fabricated test successes.</p></main><footer>PARMTECH · Source package documentation · No credentials included</footer></body></html>

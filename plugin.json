@@ -1,0 +1,41 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "parmtech-cpanel-connector",
+  "version": "0.2.0-alpha.2",
+  "description": "Hosted OAuth MCP connector for cPanel\u00c2\u00ae and WHM\u00c2\u00ae hosting accounts. PARMTECH builds custom software and integrations.",
+  "author": {
+    "name": "PARMTECH",
+    "url": "https://parmtech.au/"
+  },
+  "homepage": "https://parmtech.au/",
+  "license": "UNLICENSED",
+  "keywords": [
+    "cpanel",
+    "hosting",
+    "mcp",
+    "websites",
+    "PARMTECH"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "PARMTECH cPanel and WHM Connector",
+        "shortDescription": "Manage hosting profiles through PARMTECH's hosted MCP service.",
+        "longDescription": "Connect cPanel UAPI or WHM API 1 using an API token or supported username/password authentication. Enter credentials only on your secure hosted connection page. Credentials are validated before saving and encrypted in per-user storage. OAuth scopes distinguish cPanel account actions from broader WHM server actions. Built by PARMTECH.",
+        "developerName": "PARMTECH",
+        "websiteURL": "https://parmtech.au/",
+        "supportURL": "https://parmtech.au/",
+        "privacyPolicyURL": "https://parmtech.au/index.php?view=privacy",
+        "termsOfServiceURL": "https://parmtech.au/",
+        "defaultPrompt": [
+          "List the domains on my connected cPanel account.",
+          "Show files in public_html and summarize the site structure.",
+          "Use cPanel UAPI to make the hosting change I describe, explaining the function before you run it."
+        ],
+        "brandColor": "#06B6D4",
+        "composerIcon": "./assets/parmtech-logo.png",
+        "logo": "./assets/parmtech-logo.png"
+      }
+    }
+  }
+}

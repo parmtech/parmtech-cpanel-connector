@@ -1,0 +1,16 @@
+{
+  "PUBLIC_BASE_URL": "https://connector.example.com",
+  "COMPANY_SITE_URL": "https://example.com/",
+  "SETUP_OWNER_EMAIL": "owner@example.com",
+  "REGISTRATION_ALLOWED_EMAILS": "owner@example.com",
+  "PGHOST": "127.0.0.1",
+  "PGPORT": "5432",
+  "PGDATABASE": "account_connector",
+  "PGUSER": "account_connector_user",
+  "PGPASSWORD": "REPLACE_WITH_DATABASE_PASSWORD",
+  "PG_SSL": "false",
+  "TRUST_PROXY": "false",
+  "MAIL_TRANSPORT": "sendmail",
+  "MAIL_FROM": "Connector <admin@example.com>",
+  "CPANEL_DNS_ZONE": "example.com"
+}

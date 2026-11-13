@@ -1,0 +1,46 @@
+{
+  "name": "parmtech-cpanel-connector",
+  "version": "0.2.0-alpha.2",
+  "private": true,
+  "description": "Hosted OAuth MCP connector for cPanel UAPI and WHM API 1. Company: https://parmtech.au",
+  "homepage": "https://parmtech.au/",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/src/hosted/server.js",
+    "start:local": "node dist/src/index.js",
+    "setup": "tsx src/setup.ts",
+    "setup:gui": "tsx src/index.ts --setup",
+    "setup:gui:compiled": "node dist/src/index.js --setup",
+    "http": "tsx src/index.ts --http",
+    "validate:mock": "tsx scripts/validate-mock.ts",
+    "validate:http": "tsx scripts/smoke-http.ts",
+    "test": "npm run build && npm run validate:mock && tsx scripts/validate-local.ts && node scripts/validate-cpanel.cjs && tsx scripts/validate-owner-import.ts && node scripts/validate-installers.cjs",
+    "test:setup-db": "tsx scripts/validate-first-admin-db.ts",
+    "package:full": "python scripts/build-distribution.py"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@napi-rs/keyring": "^2.1.2",
+    "acme-client": "^5.4.0",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.7.3",
+    "ipaddr.js": "^2.5.0",
+    "nodemailer": "^10.3.1",
+    "pg": "^8.23.1",
+    "undici": "^8.12.4",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^22.19.0",
+    "@types/nodemailer": "^8.0.2",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  }
+}

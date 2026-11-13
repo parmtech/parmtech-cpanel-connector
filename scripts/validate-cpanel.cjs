@@ -1,0 +1,23 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const crypto = require('node:crypto');
+const {loadConfiguration} = require('../deploy/cpanel/load-config.cjs');
+const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'parmtech-hosted-'));
+const app = path.join(directory, 'application');fs.mkdirSync(app);
+const filename = path.join(directory, 'private.json');
+const key = crypto.randomBytes(32).toString('base64');
+const config = {PUBLIC_BASE_URL:'https://connector.example.test', CREDENTIAL_ENCRYPTION_KEY:key,
+  PGHOST:'localhost',PGDATABASE:'test',PGUSER:'test',PGPASSWORD:'test-only',MAIL_TRANSPORT:'sendmail'};
+fs.writeFileSync(filename, JSON.stringify(config), {mode:0o600});
+const first={PORT:'12345'};loadConfiguration(filename, app, first);
+assert.equal(first.CREDENTIAL_ENCRYPTION_KEY,key);assert.equal(first.PORT,'12345');
+const second={};loadConfiguration(filename, app, second);
+assert.equal(second.CREDENTIAL_ENCRYPTION_KEY,key,'restarts must use the same saved encryption key');
+assert.throws(()=>loadConfiguration(path.join(directory,'absent.json'),app,{}));
+assert.equal(fs.existsSync(path.join(directory,'absent.json')),false,'missing key must never be silently regenerated');
+const publicConfig=path.join(app,'config.json');fs.writeFileSync(publicConfig,JSON.stringify(config),{mode:0o600});
+assert.throws(()=>loadConfiguration(publicConfig,app,{}),/outside/);
+assert.deepEqual(JSON.parse(fs.readFileSync(filename,'utf8')),config);
+console.log('cPanel persistent configuration checks passed: stable key, preserved runtime port, no regeneration, private path enforced.');

@@ -1,0 +1,13 @@
+node_modules
+dist
+.env
+outputs
+*.log
+work
+.git
+private
+.env.*
+**/*.pem
+**/*.key
+**/*.enc
+HOSTED-CONNECTOR-HANDOFF.md

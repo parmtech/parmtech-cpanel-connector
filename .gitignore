@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+*.log
+work/
+outputs/
+*.pem
+*.key
+*.enc
+*.p12
+runtime.json
+accounts.json
+private/
+__pycache__/
+HOSTED-CONNECTOR-HANDOFF.md
