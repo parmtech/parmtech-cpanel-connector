@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "parmtech-cpanel-connector",
-  "version": "0.2.0-alpha.2",
+  "version": "0.2.0-alpha.3",
   "description": "Hosted OAuth MCP connector for cPanel\u00c2\u00ae and WHM\u00c2\u00ae hosting accounts. PARMTECH builds custom software and integrations.",
   "author": {
     "name": "PARMTECH",

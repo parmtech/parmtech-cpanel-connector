@@ -2,6 +2,7 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import type { Express, Request, Response } from "express";
 import type { SystemAccountStore } from "./store.js";
 import { normalizeCpanelHost, validateCpanelUsername } from "./host.js";
+import {renderPage} from './hosted/presentation.js';
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[char]!);
@@ -60,9 +61,7 @@ function setupErrorCode(error: unknown): string {
 }
 
 function page(title: string, body: string, csrf: string): string {
-  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)} · PARMTECH</title><style>
-    :root{color-scheme:light dark;font:16px/1.5 system-ui,Segoe UI,sans-serif}body{margin:0;background:#0b1220;color:#e8edf5}.wrap{max-width:720px;margin:7vh auto;padding:24px}main{background:#121c2e;border:1px solid #26344c;border-radius:18px;padding:28px;box-shadow:0 16px 50px #0004}h1{font-size:1.65rem;margin:0 0 8px}.muted{color:#aebbd0}.notice{padding:12px 14px;border-radius:10px;background:#17263b;margin:16px 0}.error{background:#421e2a;color:#ffd8df}.success{background:#12372d;color:#d5ffef}.row{padding:14px 0;border-bottom:1px solid #26344c}.row:last-child{border:0}label{display:block;font-weight:600;margin:16px 0 6px}input{box-sizing:border-box;width:100%;padding:11px 12px;border:1px solid #43536e;border-radius:9px;background:#0b1220;color:#fff;font:inherit}button{margin-top:18px;padding:11px 16px;border:0;border-radius:9px;background:#22b8cf;color:#04141a;font:600 1rem system-ui;cursor:pointer}button:hover{background:#67d9e7}.foot{font-size:.9rem;color:#aebbd0;margin-top:18px}code{word-break:break-all}
-  </style><body><div class="wrap"><main><h1>${escapeHtml(title)}</h1><p class="muted">Local setup on this Windows computer. Credentials are validated with cPanel and saved to Windows Credential Manager.</p>${body}<p class="foot">Keep this page open only on your computer. The API token is never shown again and is not sent to ChatGPT.</p></main></div></body></html>`;
+  return renderPage(title,`<p class="page-intro">Local setup on this Windows computer. Credentials are validated with cPanel and saved to Windows Credential Manager.</p>${body}<p class="foot">Keep this page open only on your computer. The API token is never shown again and is not sent to ChatGPT.</p>`,{local:true});
 }
 
 export function attachLocalSetupUi(app: Express, store: SystemAccountStore, port: number): void {

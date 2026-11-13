@@ -20,7 +20,7 @@ The operator migration is bound to the configured, email-verified owner. It vali
 
 ## HTTPS and renewal
 
-Let’s Encrypt DNS-01 issuance and cPanel SSL installation succeeded. TLS hostname validation and HTTP308 to HTTPS were checked. The initial certificate expires10February2027; daily renewal checks run on the hosting server and renew within30days of expiry. The real server check passed the fresh-certificate path. Renewal reuses its saved ACME account key and accesses cPanel through a separately AES-GCM-encrypted maintenance credential in the private operations directory. DNS changes are limited to the exact challenge TXT name/value; unrelated records are preserved. The maintenance process logs no secrets. Failure sends a Punjabi notification to the owner mailbox.
+Let’s Encrypt DNS-01 issuance and cPanel SSL installation succeeded. TLS hostname validation and HTTP308 to HTTPS were checked. The initial certificate expires10February2027; daily renewal checks run on the hosting server and renew within30days of expiry. The real server check passed the fresh-certificate path. Renewal reuses its saved ACME account key and accesses cPanel through a separately AES-GCM-encrypted maintenance credential in the private operations directory. DNS changes are limited to the exact challenge TXT name/value; unrelated records are preserved. The maintenance process logs no secrets. Failure sends an English notification to the owner mailbox.
 
 The hosting operations state/receipts are in the connector workspace's `work/hosted-connector-stage.json`, `work/connector-ssl-evidence.json` and `work/hosted-connector-http-evidence.json`. These contain no plaintext secret values. Private hosting runtime files and key material must never be put in a public ZIP or Git.
 

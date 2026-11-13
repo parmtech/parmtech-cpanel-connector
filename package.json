@@ -1,6 +1,6 @@
 {
   "name": "parmtech-cpanel-connector",
-  "version": "0.2.0-alpha.2",
+  "version": "0.2.0-alpha.3",
   "private": true,
   "description": "Hosted OAuth MCP connector for cPanel UAPI and WHM API 1. Company: https://parmtech.au",
   "homepage": "https://parmtech.au/",
@@ -19,7 +19,7 @@
     "http": "tsx src/index.ts --http",
     "validate:mock": "tsx scripts/validate-mock.ts",
     "validate:http": "tsx scripts/smoke-http.ts",
-    "test": "npm run build && npm run validate:mock && tsx scripts/validate-local.ts && node scripts/validate-cpanel.cjs && tsx scripts/validate-owner-import.ts && node scripts/validate-installers.cjs",
+    "test": "npm run build && npm run validate:mock && tsx scripts/validate-local.ts && node scripts/validate-cpanel.cjs && tsx scripts/validate-owner-import.ts && node scripts/validate-installers.cjs && tsx scripts/validate-presentation.ts",
     "test:setup-db": "tsx scripts/validate-first-admin-db.ts",
     "package:full": "python scripts/build-distribution.py"
   },

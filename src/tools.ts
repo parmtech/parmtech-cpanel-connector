@@ -17,7 +17,7 @@ function toolAuthMeta(scopes: string[], local: boolean) {
 }
 
 export function createCpanelMcpServer(store: AccountStore, client = new UapiClient(), whmClient = new WhmClient(), options: { local?: boolean } = {}): McpServer {
-  const server = new McpServer({ name: "PARMTECH cPanel and WHM Connector", version: "0.2.0-alpha.2" });
+  const server = new McpServer({ name: "PARMTECH cPanel and WHM Connector", version: "0.2.0-alpha.3" });
   const auth = (scopes: string[]) => toolAuthMeta(scopes, options.local === true);
 
   server.registerTool(

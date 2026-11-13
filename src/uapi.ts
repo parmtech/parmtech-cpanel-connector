@@ -55,7 +55,7 @@ export class UapiClient {
         headers: {
           Authorization: auth,
           Accept: "application/json",
-          "User-Agent": "PARMTECH-cPanel-Connector/0.2.0-alpha.2",
+          "User-Agent": "PARMTECH-cPanel-Connector/0.2.0-alpha.3",
         },
         signal: controller.signal,
         redirect: "error",

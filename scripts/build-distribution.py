@@ -49,7 +49,7 @@ with zipfile.ZipFile(archive) as z:
         import io
         with zipfile.ZipFile(io.BytesIO(z.read(nested))) as child:assert child.testzip() is None
 shutil.copyfile(root/'docs/START-HERE.html',directory/'START-HERE.html')
-shutil.copyfile(root/'docs/QUICKSTART-PA.md',directory/'QUICKSTART-PA.md')
+shutil.copyfile(root/'docs/QUICKSTART.md',directory/'QUICKSTART.md')
 digest=hashlib.sha256(archive.read_bytes()).hexdigest()
 (directory/'SHA256SUMS.txt').write_text(digest+'  '+archive.name+'\n',encoding='ascii')
 (directory/'SOURCE-MANIFEST.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')

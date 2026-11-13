@@ -1,6 +1,6 @@
 # PARMTECH cPanel Connector — complete setup and user guide
 
-Version: 0.2.0-alpha.2 · Prepared 13 November 2026
+Version: 0.2.0-alpha.3 · Prepared 13 November 2026
 
 ## 1. What is in this project?
 
@@ -52,7 +52,7 @@ An owner email change after setup does not reset the existing administrator. Do 
 
 ## 5. Add or migrate a hosting connection
 
-After login, choose **Add another connection** and fill in:
+After login, use **Add a hosting profile** and fill in:
 
 | Field | Example or meaning |
 |---|---|
@@ -160,7 +160,7 @@ Install the Node dependencies, then schedule the included renewer using the real
 PARMTECH_OPERATIONS_DIR=/home/ACCOUNT/private /path/to/node /home/ACCOUNT/connector-app/renew-ssl.mjs
 ```
 
-The private runtime supplies the hostname and DNS zone. DNS-01 adds/removes only the exact challenge record. The certificate and ACME account key persist in private storage. The renewer renews within30days of expiry and installs through cPanel. Do not create a new ACME account or certificate every few minutes. Set a private log/monitor for nonzero exit status; the current installation also has a Punjabi failure-email wrapper.
+The private runtime supplies the hostname and DNS zone. DNS-01 adds/removes only the exact challenge record. The certificate and ACME account key persist in private storage. The renewer renews within30days of expiry and installs through cPanel. Do not create a new ACME account or certificate every few minutes. Set a private log/monitor for nonzero exit status; the current installation also has an English failure-email wrapper.
 
 Other hosts may provide automatic certificates themselves; use their supported certificate process if the required DNS/SSL APIs are unavailable. Do not disable TLS verification as a workaround.
 

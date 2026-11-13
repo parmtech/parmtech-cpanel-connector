@@ -10,7 +10,7 @@ Source repository: https://github.com/parmtech/parmtech-cpanel-connector (alpha 
 
 ## Start here
 
-Open [the standalone guide](docs/START-HERE.html), read [the complete guide](docs/COMPLETE-GUIDE.md), or use [the Punjabi quickstart](docs/QUICKSTART-PA.md). First-time owner setup and later login are at `/mani_admin`. The connector hostname's root redirects to the configured official website. No default/shared administrator password is supplied.
+Open [the standalone guide](docs/START-HERE.html), read [the complete guide](docs/COMPLETE-GUIDE.md), or use [the quickstart](docs/QUICKSTART.md). First-time owner setup and later login are at `/mani_admin`. The connector hostname's root redirects to the configured official website. No default/shared administrator password is supplied.
 
 For a new deployment, configure the trusted owner email, database, mail and stable encryption key once. The first browser setup verifies that mailbox before creating the administrator. The source package is MIT-licensed; actual hosting secrets and local operational state are not part of the distribution. The PARMTECH endpoint remains owner-restricted, and no public ChatGPT directory approval is claimed.
 

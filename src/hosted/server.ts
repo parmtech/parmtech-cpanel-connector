@@ -16,6 +16,8 @@ import { WhmClient } from "../whm.js";
 import type { AccountCredentials } from "../types.js";
 import { publicEgressFetch, resolvePublicHost } from "./outbound.js";
 import { importOwnerConnection } from "./owner-import.js";
+import {renderPage,renderDashboard,renderField,renderHostingForm} from './presentation.js';
+import {setupCodeEmail,profileVerificationEmail} from './email-templates.js';
 
 const baseText = process.env.PUBLIC_BASE_URL;
 if (!baseText) throw new Error("PUBLIC_BASE_URL must be configured for the hosted connector.");
@@ -91,10 +93,10 @@ function escapeHtml(value: unknown): string {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
 }
 function page(title: string, body: string): string {
-  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)} · PARMTECH</title><style>body{font:16px system-ui;max-width:760px;margin:4vh auto;padding:0 18px;color:#172033}main{border:1px solid #d7dce5;border-radius:14px;padding:24px}label{display:block;margin:14px 0 5px}input,select,button{font:inherit;padding:10px;max-width:100%;box-sizing:border-box}input:not([type=checkbox]),select{width:100%}button{margin-top:18px;background:#1746a2;color:white;border:0;border-radius:7px;cursor:pointer}.notice{background:#eef4ff;padding:12px;border-radius:8px}.error{color:#a22}.row{border-top:1px solid #ddd;padding:10px 0}.subtle{color:#586174;font-size:.9rem}</style><main><h1>${escapeHtml(title)}</h1>${body}</main></html>`;
+  return renderPage(title,body);
 }
 function formField(label: string, name: string, type = "text", required = true, autocomplete = "off"): string {
-  return `<label for="${name}">${escapeHtml(label)}</label><input id="${name}" name="${name}" type="${type}" autocomplete="${autocomplete}" ${required ? "required" : ""}>`;
+  return renderField(label,name,type,required,autocomplete);
 }
 function readCookie(req: Request, name: string): string | undefined {
   const raw = req.headers.cookie ?? "";
@@ -129,7 +131,7 @@ async function safeLocalHost(raw: string, kind: "cpanel" | "whm"): Promise<strin
   return url.origin;
 }
 function errorPage(res: Response, title: string, message: string, status = 400): void {
-  res.status(status).type("html").send(page(title, `<p class="error">${escapeHtml(message)}</p><p><a href="/settings">Return to connection settings</a></p>`));
+  res.status(status).type("html").send(page(title, `<p class="error">${escapeHtml(message)}</p><p><a href="/mani_admin">Return to connection settings</a></p>`));
 }
 const mailer = process.env.MAIL_TRANSPORT === "sendmail"
   ? nodemailer.createTransport({ sendmail: true, newline: "unix", path: "/usr/sbin/sendmail" })
@@ -158,7 +160,7 @@ app.post('/mani_admin/setup/request',registrationLimit,async(req,res)=>{
  if(!mailer||!process.env.MAIL_FROM)return errorPage(res,'Email delivery unavailable','Configure the server mail transport before first-time setup.',503);
  try{
   const challenge=await repository.requestAdminSetup(email,binding);
-  await mailer.sendMail({from:process.env.MAIL_FROM,to:email,subject:'PARMTECH: ਪਹਿਲੀ admin setup ਦਾ verification code',text:`ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ ਜੀ,\n\nਤੁਹਾਡਾ admin setup code: ${challenge.code}\n\nਇਹ code ਪੰਦਰਾਂ ਮਿੰਟ ਲਈ valid ਹੈ। ਇਸਨੂੰ ਉਸੇ setup form ਵਿੱਚ ਪਾਓ ਅਤੇ ਆਪਣਾ ਨਵਾਂ password ਬਣਾਓ। Code ਜਾਂ password chat ਵਿੱਚ ਨਾ ਭੇਜੋ। ਜੇ ਤੁਸੀਂ setup ਸ਼ੁਰੂ ਨਹੀਂ ਕੀਤੀ, ਇਹ email ਨਜ਼ਰਅੰਦਾਜ਼ ਕਰੋ।\n\n— PARMTECH`});
+  await mailer.sendMail({from:process.env.MAIL_FROM,to:email,...setupCodeEmail(challenge.code)});
   return res.type('html').send(page('Verify email and set password',`<p>A code was sent to ${escapeHtml(email)}. Keep this browser tab open.</p><form method="post" action="/mani_admin/setup/finish"><input type="hidden" name="csrf" value="${escapeHtml(binding)}"><input type="hidden" name="challenge" value="${escapeHtml(challenge.id)}">${formField('Email code (8 digits)','code','text',true,'one-time-code')}${formField('New password (12–256 characters)','password','password',true,'new-password')}${formField('Confirm new password','confirm','password',true,'new-password')}<button>Create admin login</button></form>`));
  }catch{return errorPage(res,'Could not send setup code','Check email delivery, or wait fifteen minutes before requesting another code.');}
 });
@@ -166,7 +168,7 @@ app.post('/mani_admin/setup/finish',authBurstLimit,async(req,res)=>{
  const binding=readCookie(req,'parmtech_form_csrf');
  const id=String(req.body.challenge??''),code=String(req.body.code??''),password=String(req.body.password??'');
  if(!binding||req.body.csrf!==binding)return errorPage(res,'Form expired','Reload the admin page and try again.',403);
- if(!/^[a-f0-9-]{36}$/i.test(id)||!/^\d{8}$/.test(code)||password.length<12||password.length>256||password!==req.body.confirm)return errorPage(res,'Check setup details','Use the eight-digit code and matching passwords of12–256 characters.');
+ if(!/^[a-f0-9-]{36}$/i.test(id)||!/^\d{8}$/.test(code)||password.length<12||password.length>256||password!==req.body.confirm)return errorPage(res,'Check setup details','Use the eight-digit code and matching passwords of 12–256 characters.');
  const user=await repository.finishAdminSetup(id,code,binding,password);
  if(!user)return errorPage(res,'Setup code unavailable','The code is incorrect, expired, used, or setup is already complete. Open the admin page again.',400);
  const session=await repository.createSession(user.id);setSession(res,session.cookie);
@@ -192,8 +194,9 @@ app.get("/oauth/approve", async (req, res) => {
   const accounts = await repository.listAccounts(user.userId);
   if (!accounts.length) return res.type("html").send(page("Add a hosting connection", `<p class="notice">No hosting connection is configured. Add one here to complete the OAuth connection.</p>${accountForm(user.csrf, `/accounts/add?tx=${encodeURIComponent(txId)}`)}`));
   const permissions: Array<[string, string]> = [["accounts:read", "View connected profile labels and select an account"], ["accounts:write", "Disconnect saved hosting profiles"], ["cpanel:read", "Read cPanel account data"], ["cpanel:write", "Make changes allowed by cPanel permissions"], ["whm:read", "Read server-level WHM data"], ["whm:write", "Make server-level changes allowed by WHM permissions"], ["offline_access", "Keep this connection active using refresh tokens"]];
-  const checkboxes = permissions.filter(([scope]) => tx.scopes.includes(scope)).map(([scope, label]) => `<p><label><input type="checkbox" name="scope" value="${scope}" ${scope === "accounts:read" || scope === "cpanel:read" || scope === "offline_access" ? "checked" : ""}> ${label}</label></p>`).join("");
-  return res.type("html").send(page("Authorize PARMTECH", `<p>Signed in as ${escapeHtml(user.email)}. Select the permissions to grant this ChatGPT connection.</p><p class="subtle">Connected profiles: ${accounts.map((a) => `${escapeHtml(a.label)} (${a.kind?.toUpperCase() ?? "CPANEL"})`).join(", ")}</p><form method="post" action="/oauth/consent"><input type="hidden" name="tx" value="${escapeHtml(txId)}"><input type="hidden" name="csrf" value="${escapeHtml(user.csrf)}">${checkboxes}<p class="subtle">WHM grants can affect multiple accounts and the whole server. Your account's permissions and two-factor settings still apply.</p><button>Authorize this ChatGPT connection</button></form><p><a href="/settings">Manage hosting connections</a></p>`));
+  const checkboxes = permissions.filter(([scope]) => tx.scopes.includes(scope)).map(([scope, label]) => `<div class="permission-note"><label><input type="checkbox" name="scope" value="${scope}" ${scope === "accounts:read" || scope === "cpanel:read" || scope === "offline_access" ? "checked" : ""}> ${label}</label></div>`).join("");
+  const client=await repository.getClient(tx.clientId);
+  return res.type("html").send(page("Authorize PARMTECH", `<p class="page-intro">Review what this client can access before you connect.</p><div class="notice"><strong>${escapeHtml(client?.client_name??'MCP client')}</strong><br><span class="helper">Application-provided name. Returns to ${escapeHtml(new URL(tx.redirectUri).origin)}.</span></div><p class="subtle">Signed in as ${escapeHtml(user.email)}.<br>Profiles: ${accounts.map((a) => `${escapeHtml(a.label)} (${a.kind?.toUpperCase() ?? "CPANEL"})`).join(", ")}</p><form method="post" action="/oauth/consent"><input type="hidden" name="tx" value="${escapeHtml(txId)}"><input type="hidden" name="csrf" value="${escapeHtml(user.csrf)}">${checkboxes}<p class="helper">WHM permissions can affect multiple hosting accounts. Only permissions already held by your hosting credential can be used.</p><button>Authorize connection</button></form><a class="return-link" href="/mani_admin">Back to hosting connections</a>`));
 });
 
 app.post("/oauth/signup", registrationLimit, async (req, res) => {
@@ -209,7 +212,7 @@ app.post("/oauth/signup", registrationLimit, async (req, res) => {
     const created = await repository.createUser(email, password);
     const token = await repository.createVerification(created.id);
     const url = new URL(`/verify?token=${encodeURIComponent(token)}&tx=${encodeURIComponent(txId)}`, baseUrl);
-    await mailer.sendMail({ from: process.env.MAIL_FROM, to: email, subject: "Verify your PARMTECH connector profile", text: `Verify your email at ${url.href}` });
+    await mailer.sendMail({ from: process.env.MAIL_FROM, to: email, ...profileVerificationEmail(url.href) });
     res.type("html").send(page("Check your email", `<p>A verification link was sent to ${escapeHtml(email)}. Open it to continue connecting.</p>`));
   } catch { errorPage(res, "Could not create profile", "This email may already have a profile, or the registration service is temporarily unavailable."); }
 });
@@ -242,16 +245,11 @@ app.post("/profile/login", authBurstLimit, async (req, res) => {
   if (!user || !(await repository.isEmailVerified(user.id))) return errorPage(res, "Sign-in failed", "Check your sign-in details or verify your email first.", 401);
   const session = await repository.createSession(user.id);
   setSession(res, session.cookie);
-  res.redirect(303, "/settings");
+  res.redirect(303, "/mani_admin");
 });
 
 function accountForm(csrf: string, action: string): string {
-  return `<form method="post" action="${escapeHtml(action)}"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}">${formField("Connection label", "label")}${formField("Server hostname", "host", "text", true)}${formField("cPanel or WHM username", "username")}
-  <label for="kind">API access level</label><select id="kind" name="kind"><option value="cpanel">cPanel account access (UAPI)</option><option value="whm">WHM server access (API 1; broader privileges)</option></select>
-  <label for="authType">Credential type</label><select id="authType" name="authType"><option value="token">API token</option><option value="password">Username and password</option></select>
-  <label for="secret">API token or password</label><input id="secret" name="secret" type="password" autocomplete="new-password" required>
-  <label for="tokenName">API token name for optional remote revocation (optional)</label><input id="tokenName" name="tokenName" type="text" autocomplete="off">
-  <p class="subtle">Credential is validated over HTTPS and encrypted before storage. It will not be shown again. Deprecated WHM access hashes are not supported.</p><button>Validate and save connection</button></form>`;
+  return renderHostingForm(csrf,action);
 }
 
 app.get(['/mani_admin','/mani_admin/'], async (req, res) => {
@@ -262,9 +260,8 @@ app.get(['/mani_admin','/mani_admin/'], async (req, res) => {
     return res.type('html').send(page('Admin login',`<p>Sign in using the email and password created during first-time setup. This is not your cPanel password.</p><form method="post" action="/profile/login">${formField('Email','email','email',true,'email')}${formField('Password','password','password',true,'current-password')}<input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button>Sign in</button></form>`));
   }
   const accounts = await repository.listAccounts(user.userId);
-  const rows = accounts.map((a) => `<div class="row"><strong>${escapeHtml(a.label)}</strong> · ${escapeHtml(a.kind?.toUpperCase() ?? "CPANEL")} · ${escapeHtml(a.username)}@${escapeHtml(a.host)}<form method="post" action="/accounts/remove"><input type="hidden" name="csrf" value="${escapeHtml(user.csrf)}"><input type="hidden" name="id" value="${escapeHtml(a.id)}">${(a.kind === "cpanel" || a.kind === "whm") && a.authType === "token" && a.tokenName ? `<label><input type="checkbox" name="revokeRemote" value="yes"> Revoke token “${escapeHtml(a.tokenName)}” on ${a.kind === "whm" ? "WHM" : "cPanel"} too</label>` : ""}<button>Disconnect</button></form></div>`).join("");
   const notice = req.query.disconnected === "1" ? `<p class="notice">Connection disconnected${req.query.revoked === "1" ? " and its remote token was revoked" : ""}.</p>` : "";
-  return res.type("html").send(page("Connection settings", `<p>Signed in as ${escapeHtml(user.email)}.</p>${notice}${rows || "<p>No hosting connections yet.</p>"}<h2>Add another connection</h2>${accountForm(user.csrf, "/accounts/add")}<form method="post" action="/logout"><input type="hidden" name="csrf" value="${escapeHtml(user.csrf)}"><button>Sign out</button></form>`));
+  return res.type("html").send(page('Connection settings',renderDashboard(user,accounts,accountForm(user.csrf,'/accounts/add'),resource.href,notice)));
 });
 
 app.post("/accounts/add", accountLimit, async (req, res) => {
@@ -312,7 +309,7 @@ app.post("/accounts/remove", accountLimit, async (req, res) => {
     }
     stage = "remove";
     await repository.removeAccount(user.userId, req.body.id);
-    res.redirect(303, `/settings?disconnected=1${remoteRevoked ? "&revoked=1" : ""}`);
+    res.redirect(303, `/mani_admin?disconnected=1${remoteRevoked ? "&revoked=1" : ""}`);
   }
   catch (error) {
     if (stage === "remote-revoke") return errorPage(res, "Remote token revocation failed", "The connection remains saved because the hosting server did not confirm token revocation. Check API token-management permissions and try again.");
