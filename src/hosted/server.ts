@@ -18,6 +18,7 @@ import { publicEgressFetch, resolvePublicHost } from "./outbound.js";
 import { importOwnerConnection } from "./owner-import.js";
 import {renderPage,renderDashboard,renderField,renderHostingForm} from './presentation.js';
 import {setupCodeEmail,profileVerificationEmail} from './email-templates.js';
+import { securityHeaders, allowOAuthCallback } from "./security-policy.js";
 
 const baseText = process.env.PUBLIC_BASE_URL;
 if (!baseText) throw new Error("PUBLIC_BASE_URL must be configured for the hosted connector.");
@@ -55,14 +56,7 @@ const app = createMcpExpressApp({ host: "0.0.0.0", allowedHosts: [baseUrl.host] 
 app.disable("x-powered-by");
 app.set("trust proxy", process.env.TRUST_PROXY === "true" ? 1 : false);
 app.use(express.urlencoded({ extended: false, limit: "32kb" }));
-app.use((_req, res, next) => {
-  res.setHeader("Cache-Control", "no-store");
-  res.setHeader("Referrer-Policy", "no-referrer");
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  res.setHeader("X-Frame-Options", "DENY");
-  res.setHeader("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
-  next();
-});
+app.use(securityHeaders);
 app.get("/.well-known/oauth-authorization-server", (_req, res) => res.json({
   issuer: issuer.href,
   authorization_endpoint: new URL("/authorize", baseUrl).href,
@@ -196,6 +190,7 @@ app.get("/oauth/approve", async (req, res) => {
   const permissions: Array<[string, string]> = [["accounts:read", "View connected profile labels and select an account"], ["accounts:write", "Disconnect saved hosting profiles"], ["cpanel:read", "Read cPanel account data"], ["cpanel:write", "Make changes allowed by cPanel permissions"], ["whm:read", "Read server-level WHM data"], ["whm:write", "Make server-level changes allowed by WHM permissions"], ["offline_access", "Keep this connection active using refresh tokens"]];
   const checkboxes = permissions.filter(([scope]) => tx.scopes.includes(scope)).map(([scope, label]) => `<div class="permission-note"><label><input type="checkbox" name="scope" value="${scope}" ${scope === "accounts:read" || scope === "cpanel:read" || scope === "offline_access" ? "checked" : ""}> ${label}</label></div>`).join("");
   const client=await repository.getClient(tx.clientId);
+  allowOAuthCallback(res, tx.redirectUri);
   return res.type("html").send(page("Authorize PARMTECH", `<p class="page-intro">Review what this client can access before you connect.</p><div class="notice"><strong>${escapeHtml(client?.client_name??'MCP client')}</strong><br><span class="helper">Application-provided name. Returns to ${escapeHtml(new URL(tx.redirectUri).origin)}.</span></div><p class="subtle">Signed in as ${escapeHtml(user.email)}.<br>Profiles: ${accounts.map((a) => `${escapeHtml(a.label)} (${a.kind?.toUpperCase() ?? "CPANEL"})`).join(", ")}</p><form method="post" action="/oauth/consent"><input type="hidden" name="tx" value="${escapeHtml(txId)}"><input type="hidden" name="csrf" value="${escapeHtml(user.csrf)}">${checkboxes}<p class="helper">WHM permissions can affect multiple hosting accounts. Only permissions already held by your hosting credential can be used.</p><button>Authorize connection</button></form><a class="return-link" href="/mani_admin">Back to hosting connections</a>`));
 });
 
