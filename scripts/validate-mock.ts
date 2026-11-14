@@ -5,6 +5,11 @@ import { normalizeCpanelHost } from "../src/host.js";
 import { MemoryAccountStore } from "../src/store.js";
 import { createCpanelMcpServer } from "../src/tools.js";
 import { UapiClient, type FetchLike } from "../src/uapi.js";
+import { StagedUploadStore } from "../src/hosted/staged-upload.js";
+import { createHash } from "node:crypto";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const mockToken = "mock-token-never-use-in-production";
 const requests: Array<{ url: string; authorization: string | null; method?: string; body?: BodyInit | null }> = [];
@@ -57,7 +62,9 @@ const account = await store.add({
   apiToken: mockToken,
   tokenName: "PARMTECH Connector Test",
 });
-const mcpServer = createCpanelMcpServer(store, new UapiClient(mockFetch));
+const temporaryRoot = await mkdtemp(join(tmpdir(), "parmtech-upload-mock-"));
+const staged = new StagedUploadStore("test-owner", temporaryRoot);
+const mcpServer = createCpanelMcpServer(store, new UapiClient(mockFetch), undefined, { stagedUploads: staged });
 const mcpClient = new Client({ name: "mock-validation", version: "0.0.1" });
 const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
 await mcpServer.connect(serverTransport);
@@ -65,7 +72,7 @@ await mcpClient.connect(clientTransport);
 
 const toolList = await mcpClient.listTools();
 const toolNames = toolList.tools.map((tool) => tool.name);
-for (const required of ["cpanel_list_accounts", "cpanel_list_domains", "cpanel_list_email_accounts", "cpanel_list_files", "cpanel_create_email_account", "cpanel_delete_email_account", "cpanel_upload_file", "cpanel_extract_archive", "cpanel_api2_execute", "cpanel_uapi_execute", "cpanel_disconnect_account"]) {
+for (const required of ["cpanel_list_accounts", "cpanel_list_domains", "cpanel_list_email_accounts", "cpanel_list_files", "cpanel_create_email_account", "cpanel_delete_email_account", "cpanel_upload_file", "cpanel_begin_file_upload", "cpanel_append_file_chunk", "cpanel_finish_file_upload", "cpanel_cancel_file_upload", "cpanel_extract_archive", "cpanel_api2_execute", "cpanel_uapi_execute", "cpanel_disconnect_account"]) {
   assert.ok(toolNames.includes(required), `Missing MCP tool: ${required}`);
 }
 
@@ -109,6 +116,31 @@ assert.equal(unsafeSource.isError, true);
 const extracted = await mcpClient.callTool({ name: "cpanel_extract_archive", arguments: { accountId: account.id, archivePath: "/home/exampleuser/stage/product.zip", destinationDirectory: "/home/exampleuser/public_html" } });
 assert.equal(extracted.isError, undefined);
 
+const largeBytes = Buffer.alloc(700_000, 0x4b);
+const sha256 = createHash("sha256").update(largeBytes).digest("hex");
+const started = await mcpClient.callTool({ name: "cpanel_begin_file_upload", arguments: { accountId: account.id, directory: "public_html", filename: "large-product.zip", totalBytes: largeBytes.length, sha256 } });
+assert.equal(started.isError, undefined);
+const uploadId = JSON.parse((started as { content: Array<{ text: string }> }).content[0]!.text).uploadId;
+await assert.rejects(() => new StagedUploadStore("different-owner", temporaryRoot).append(uploadId, 0, "aGVsbG8="), /not found|expired/i);
+const wrongOffset = await mcpClient.callTool({ name: "cpanel_append_file_chunk", arguments: { uploadId, offset: 1, contentBase64: largeBytes.subarray(0, 400_000).toString("base64") } });
+assert.equal(wrongOffset.isError, true);
+for (const [offset, end] of [[0, 400_000], [400_000, largeBytes.length]]) {
+  const chunk = await mcpClient.callTool({ name: "cpanel_append_file_chunk", arguments: { uploadId, offset, contentBase64: largeBytes.subarray(offset, end).toString("base64") } });
+  assert.equal(chunk.isError, undefined);
+}
+const finished = await mcpClient.callTool({ name: "cpanel_finish_file_upload", arguments: { uploadId } });
+assert.equal(finished.isError, undefined);
+assert.deepEqual(uploaded, { directory: "public_html", filename: "large-product.zip", bytes: new Uint8Array(largeBytes) });
+await assert.rejects(() => staged.append(uploadId, 0, "aGVsbG8="), /not found|expired/i);
+const cancelled = await staged.begin({ accountId: account.id, directory: "public_html", filename: "cancel.zip", totalBytes: 5 });
+await staged.cancel(cancelled.uploadId);
+await assert.rejects(() => staged.append(cancelled.uploadId, 0, "aGVsbG8="), /already being updated|not found|expired/i);
+const wrongHash = await staged.begin({ accountId: account.id, directory: "public_html", filename: "bad.zip", totalBytes: 5, sha256: "0".repeat(64) });
+await staged.append(wrongHash.uploadId, 0, "aGVsbG8=");
+await assert.rejects(() => staged.finish(wrongHash.uploadId, async () => { throw Error("must not upload"); }), /SHA-256/);
+await staged.cancel(wrongHash.uploadId);
+
 await mcpClient.close();
 await mcpServer.close();
+await rm(temporaryRoot, { recursive: true, force: true });
 process.stdout.write("Mock validation passed: tool registration, UAPI auth, host validation, and secret redaction. No cPanel account was contacted.\n");

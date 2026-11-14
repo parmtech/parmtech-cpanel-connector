@@ -52,6 +52,7 @@ Deprecated WHM access-hash authentication is not supported. cPanel and WHM are s
 - `cpanel_list_accounts` returns each profile's stable ID, label, host, username, and cPanel/WHM access level. Secrets are never returned.
 - `cpanel_list_domains`, `cpanel_list_email_accounts`, and `cpanel_list_files` read cPanel account data.
 - `cpanel_upload_file` uploads a small inline file or a public HTTPS file to cPanel with multipart UAPI. `cpanel_extract_archive` extracts an uploaded ZIP. See [the capability audit](docs/CPANEL-CAPABILITY-AUDIT.md) for size and source limits.
+- The hosted connector also provides `cpanel_begin_file_upload`, `cpanel_append_file_chunk`, `cpanel_finish_file_upload`, and `cpanel_cancel_file_upload` for private files up to 128 MB, sent in 500 KB chunks. The client must have access to the file bytes; a bare path on the user's device is not enough for a remote server.
 - `cpanel_create_email_account` and `cpanel_delete_email_account` change cPanel mailboxes.
 - `cpanel_uapi_execute` exposes broad UAPI GET/form POST access and requires the `cpanel:write` grant. `cpanel_api2_execute` covers legacy API 2 functions without UAPI equivalents.
 - `whm_api_read` offers an explicit read-only allowlist for common WHM API 1 functions.

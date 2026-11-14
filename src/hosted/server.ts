@@ -15,6 +15,7 @@ import { UapiClient } from "../uapi.js";
 import { WhmClient } from "../whm.js";
 import type { AccountCredentials } from "../types.js";
 import { publicEgressFetch, resolvePublicHost } from "./outbound.js";
+import { StagedUploadStore } from "./staged-upload.js";
 import { importOwnerConnection } from "./owner-import.js";
 import {renderPage,renderDashboard,renderField,renderHostingForm} from './presentation.js';
 import {setupCodeEmail,profileVerificationEmail} from './email-templates.js';
@@ -370,7 +371,7 @@ app.post("/mcp", requireBearerAuth({ verifier: oauth, expectedResource: resource
           : name === "whm_api_read" ? "whm:read"
             : ["cpanel_list_domains", "cpanel_list_email_accounts", "cpanel_list_files"].includes(name) ? "cpanel:read"
               : name === "hosting_disconnect_connection" ? "accounts:write"
-                : ["cpanel_create_email_account", "cpanel_delete_email_account", "cpanel_upload_file", "cpanel_extract_archive", "cpanel_api2_execute", "cpanel_uapi_execute", "cpanel_disconnect_account"].includes(name) ? "cpanel:write" : ""
+                : ["cpanel_create_email_account", "cpanel_delete_email_account", "cpanel_upload_file", "cpanel_begin_file_upload", "cpanel_append_file_chunk", "cpanel_finish_file_upload", "cpanel_cancel_file_upload", "cpanel_extract_archive", "cpanel_api2_execute", "cpanel_uapi_execute", "cpanel_disconnect_account"].includes(name) ? "cpanel:write" : ""
       : "";
     return !required || !scopes.has(required) ? { id: message?.id ?? null, required } : null;
   }).find(Boolean);
@@ -390,7 +391,7 @@ app.post("/mcp", requireBearerAuth({ verifier: oauth, expectedResource: resource
     return res.status(200).json(Array.isArray(req.body) ? messages.map((message: any) => failure(message?.id ?? null)) : failure(missingScope.id));
   }
   const accountStore = await repository.accountStore(userId);
-  const server = createCpanelMcpServer(accountStore, new UapiClient(publicEgressFetch), new WhmClient(publicEgressFetch));
+  const server = createCpanelMcpServer(accountStore, new UapiClient(publicEgressFetch), new WhmClient(publicEgressFetch), { stagedUploads: new StagedUploadStore(userId) });
   try {
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     await server.connect(transport);

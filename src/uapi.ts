@@ -107,6 +107,34 @@ export class UapiClient {
     } finally { activeUploads--; }
   }
 
+  async uploadStagedFile(credentials: AccountCredentials, directory: string, filename: string, file: Blob): Promise<{ uploaded: true; directory: string; filename: string; bytes: number }> {
+    if (credentials.kind === "whm") throw new Error("File upload requires a cPanel-level connection.");
+    if (!directory || /[\r\n\0]/.test(directory) || directory.length > 1024) throw new Error("Enter a valid destination directory.");
+    if (!filename || filename === "." || filename === ".." || /[\\/\r\n\0\";]/.test(filename) || filename.length > 255) throw new Error("Enter a filename without a path.");
+    if (file.size < 1 || file.size > 128 * 1024 * 1024) throw new Error("Staged file must be between 1 byte and 128 MB.");
+    if (activeUploads) throw new Error("Another file upload is already running. Try again after it finishes.");
+    activeUploads++;
+    try {
+      const secret = credentials.authType === "password" ? credentials.password : credentials.apiToken;
+      if (!secret) throw new Error("The saved cPanel credential is incomplete.");
+      const auth = credentials.authType === "password" ? `Basic ${Buffer.from(`${credentials.username}:${secret}`).toString("base64")}` : `cpanel ${credentials.username}:${secret}`;
+      const form = new FormData();
+      form.append("dir", directory);
+      form.append("file-1", file, filename);
+      const endpoint = new URL("/execute/Fileman/upload_files", credentials.host);
+      const response = await this.fetchImpl(endpoint, { method: "POST", headers: { Authorization: auth, Accept: "application/json", "User-Agent": "PARMTECH-cPanel-Connector/0.2.0-alpha.3" }, body: form, signal: AbortSignal.timeout(300_000), redirect: "error" });
+      const body = await response.text();
+      if (Buffer.byteLength(body, "utf8") > MAX_RESPONSE_BYTES) throw new Error("cPanel returned a response larger than the 1 MB safety limit.");
+      if (!response.ok) throw new Error(`cPanel upload returned HTTP ${response.status}.`);
+      let parsed: UapiEnvelope;
+      try { parsed = JSON.parse(body) as UapiEnvelope; } catch { throw new Error("cPanel upload returned invalid JSON."); }
+      const result = parsed.result ?? (parsed as UapiEnvelope["result"]);
+      const uploads = (result?.data as { uploads?: Array<{ status?: number }> } | undefined)?.uploads;
+      if (result?.status !== 1 || (Array.isArray(result.errors) && result.errors.length > 0) || uploads?.some(item => item.status === 0)) throw new Error("cPanel did not confirm the file upload.");
+      return { uploaded: true, directory, filename, bytes: file.size };
+    } finally { activeUploads--; }
+  }
+
   async call(
     credentials: AccountCredentials,
     moduleName: string,

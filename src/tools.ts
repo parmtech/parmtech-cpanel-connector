@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { AccountStore, UapiParameters } from "./types.js";
 import { UapiClient } from "./uapi.js";
 import { WhmClient } from "./whm.js";
+import type { StagedUploadStore } from "./hosted/staged-upload.js";
 
 const scalar = z.union([z.string(), z.number(), z.boolean()]);
 const parameterSchema = z.record(z.string(), z.union([scalar, z.array(scalar), z.null()])).default({});
@@ -16,7 +17,7 @@ function toolAuthMeta(scopes: string[], local: boolean) {
   return { securitySchemes: local ? [{ type: "noauth" as const }] : [{ type: "oauth2" as const, scopes }] };
 }
 
-export function createCpanelMcpServer(store: AccountStore, client = new UapiClient(), whmClient = new WhmClient(), options: { local?: boolean } = {}): McpServer {
+export function createCpanelMcpServer(store: AccountStore, client = new UapiClient(), whmClient = new WhmClient(), options: { local?: boolean; stagedUploads?: StagedUploadStore } = {}): McpServer {
   const server = new McpServer({ name: "PARMTECH cPanel and WHM Connector", version: "0.2.0-alpha.3" });
   const auth = (scopes: string[]) => toolAuthMeta(scopes, options.local === true);
 
@@ -189,6 +190,40 @@ export function createCpanelMcpServer(store: AccountStore, client = new UapiClie
       return textResult(await client.uploadFile(credentials, directory, filename, { sourceUrl, contentBase64 }));
     },
   );
+
+  if (options.stagedUploads) {
+    const staged = options.stagedUploads;
+    server.registerTool("cpanel_begin_file_upload", {
+      title: "Begin a large cPanel file upload",
+      description: "Start a private, temporary upload for a local ZIP or other file up to 128 MB. Send the file in sequential base64 chunks with cpanel_append_file_chunk, then call cpanel_finish_file_upload. The staging area expires after two hours. If the file is accessible by a direct public HTTPS URL, cpanel_upload_file is simpler.",
+      inputSchema: { accountId: z.string().uuid(), directory: z.string().min(1), filename: z.string().min(1), totalBytes: z.number().int().min(1).max(128 * 1024 * 1024), sha256: z.string().regex(/^[0-9a-f]{64}$/i).optional() },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false }, _meta: auth(["cpanel:write"]),
+    }, async ({ accountId, directory, filename, totalBytes, sha256 }) => {
+      await store.get(accountId);
+      return textResult(await staged.begin({ accountId, directory, filename, totalBytes, sha256 }));
+    });
+    server.registerTool("cpanel_append_file_chunk", {
+      title: "Send the next file chunk",
+      description: "Append up to 500 KB of base64 file bytes to a staged upload. Chunks must be sent in byte order. This only stages the file privately; it does not change cPanel yet.",
+      inputSchema: { uploadId: z.string().uuid(), offset: z.number().int().nonnegative(), contentBase64: z.string().min(1) },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false }, _meta: auth(["cpanel:write"]),
+    }, async ({ uploadId, offset, contentBase64 }) => textResult(await staged.append(uploadId, offset, contentBase64)));
+    server.registerTool("cpanel_finish_file_upload", {
+      title: "Upload staged file to cPanel",
+      description: "After all chunks arrive, verify the file length and optional SHA-256 hash, then upload it to the selected cPanel account. This may replace a file with the same name. On success, temporary staging is removed.",
+      inputSchema: { uploadId: z.string().uuid() },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }, _meta: auth(["cpanel:write"]),
+    }, async ({ uploadId }) => textResult(await staged.finish(uploadId, async (meta, file) => {
+      const { credentials } = await store.get(meta.accountId);
+      return client.uploadStagedFile(credentials, meta.directory, meta.filename, file);
+    })));
+    server.registerTool("cpanel_cancel_file_upload", {
+      title: "Cancel a staged file upload",
+      description: "Discard a temporary upload that has not been sent to cPanel.",
+      inputSchema: { uploadId: z.string().uuid() },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false }, _meta: auth(["cpanel:write"]),
+    }, async ({ uploadId }) => textResult(await staged.cancel(uploadId)));
+  }
 
   server.registerTool(
     "cpanel_extract_archive",
