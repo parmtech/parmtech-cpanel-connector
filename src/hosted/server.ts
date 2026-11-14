@@ -20,6 +20,7 @@ import {renderPage,renderDashboard,renderField,renderHostingForm} from './presen
 import {setupCodeEmail,profileVerificationEmail} from './email-templates.js';
 import { securityHeaders, allowOAuthCallback } from "./security-policy.js";
 import { installGitHubRoutes } from "../github/routes.js";
+import { installPlayRoutes } from "../play/routes.js";
 
 const baseText = process.env.PUBLIC_BASE_URL;
 if (!baseText) throw new Error("PUBLIC_BASE_URL must be configured for the hosted connector.");
@@ -61,6 +62,7 @@ app.set("trust proxy", process.env.TRUST_PROXY === "true" ? 1 : false);
 app.use(express.urlencoded({ extended: false, limit: "32kb" }));
 app.use(securityHeaders);
 await installGitHubRoutes(app, repository, baseUrl, getUser);
+await installPlayRoutes(app, repository, baseUrl, getUser);
 app.get("/.well-known/oauth-authorization-server", (_req, res) => res.json({
   issuer: issuer.href,
   authorization_endpoint: new URL("/authorize", baseUrl).href,
@@ -244,7 +246,13 @@ app.post("/profile/login", authBurstLimit, async (req, res) => {
   if (!user || !(await repository.isEmailVerified(user.id))) return errorPage(res, "Sign-in failed", "Check your sign-in details or verify your email first.", 401);
   const session = await repository.createSession(user.id);
   setSession(res, session.cookie);
-  res.redirect(303, "/mani_admin");
+  const githubTx = String(req.body.github_tx ?? "");
+  const pending = githubTx ? await repository.getAuthorizationTransaction(githubTx) : null;
+  const githubResource = new URL("/github/mcp", baseUrl).href;
+  const playTx = String(req.body.play_tx ?? "");
+  const playPending = playTx ? await repository.getAuthorizationTransaction(playTx) : null;
+  const playResource = new URL("/play/mcp", baseUrl).href;
+  res.redirect(303, pending?.resource === githubResource ? `/github/oauth/approve?tx=${encodeURIComponent(githubTx)}` : playPending?.resource === playResource ? `/play/oauth/approve?tx=${encodeURIComponent(playTx)}` : "/mani_admin");
 });
 
 function accountForm(csrf: string, action: string): string {
@@ -256,11 +264,17 @@ app.get(['/mani_admin','/mani_admin/'], async (req, res) => {
   const user = await getUser(req);
   if (!user) {
     const csrf=adminFormCsrf(req,res);
-    return res.type('html').send(page('Admin login',`<p>Sign in using the email and password created during first-time setup. This is not your cPanel password.</p><form method="post" action="/profile/login">${formField('Email','email','email',true,'email')}${formField('Password','password','password',true,'current-password')}<input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button>Sign in</button></form>`));
+    const githubTx = String(req.query.github_tx ?? "");
+    const pending = githubTx ? await repository.getAuthorizationTransaction(githubTx) : null;
+    const githubReturn = pending?.resource === new URL("/github/mcp", baseUrl).href ? `<input type="hidden" name="github_tx" value="${escapeHtml(githubTx)}">` : "";
+    const playTx = String(req.query.play_tx ?? "");
+    const playPending = playTx ? await repository.getAuthorizationTransaction(playTx) : null;
+    const playReturn = playPending?.resource === new URL("/play/mcp", baseUrl).href ? `<input type="hidden" name="play_tx" value="${escapeHtml(playTx)}">` : "";
+    return res.type('html').send(page('Admin login',`<p>Sign in using the email and password created during first-time setup. This is not your cPanel password.</p><form method="post" action="/profile/login">${formField('Email','email','email',true,'email')}${formField('Password','password','password',true,'current-password')}<input type="hidden" name="csrf" value="${escapeHtml(csrf)}">${githubReturn}${playReturn}<button>Sign in</button></form>`));
   }
   const accounts = await repository.listAccounts(user.userId);
   const notice = req.query.disconnected === "1" ? `<p class="notice">Connection disconnected${req.query.revoked === "1" ? " and its remote token was revoked" : ""}.</p>` : "";
-  return res.type("html").send(page('Connection settings',renderDashboard(user,accounts,accountForm(user.csrf,'/accounts/add'),resource.href,notice + '<p><a href="/mani_admin/github">PARMTECH GitHub Connector settings →</a></p>')));
+  return res.type("html").send(page('Connection settings',renderDashboard(user,accounts,accountForm(user.csrf,'/accounts/add'),resource.href,notice + '<p><a href="/mani_admin/github">PARMTECH GitHub Connector settings →</a></p><p><a href="/mani_admin/play">PARMTECH Play Console Connector settings →</a></p>')));
 });
 
 app.post("/accounts/add", accountLimit, async (req, res) => {

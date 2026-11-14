@@ -40,9 +40,9 @@ export async function installGitHubRoutes(app: Express, repo: HostedRepository, 
   app.use("/github/revoke", revocationHandler({ provider: oauth }));
 
   const page = (res: Response, title: string, body: string, status = 200) => res.status(status).type("html").send(renderPage(title, body).replaceAll("HOSTING CONNECTOR", "GITHUB CONNECTOR").replaceAll("HOSTING WORKSPACE", "GITHUB WORKSPACE").replaceAll("Independent cPanel &amp; WHM integration", "Independent GitHub integration").replaceAll("Your hosting.<br>Connected, securely.", "Your GitHub.<br>Connected, securely.").replaceAll("hosting connections", "GitHub connections").replaceAll("hosting credentials", "GitHub credentials"));
-  async function session(req: Request, res: Response) {
+  async function session(req: Request, res: Response, transactionId?: string) {
     const user = await getUser(req);
-    if (!user) { page(res, "Sign in to PARMTECH", '<p>Use your existing PARMTECH connector administrator login, then return to GitHub settings.</p><a class="button" href="/mani_admin">Open administrator login</a>'); return null; }
+    if (!user) { const login = transactionId ? `/mani_admin?github_tx=${encodeURIComponent(transactionId)}` : "/mani_admin"; page(res, "Sign in to PARMTECH", `<p>Use your existing PARMTECH connector administrator login to continue this authorization.</p><a class="button" href="${esc(login)}">Open administrator login</a>`); return null; }
     return user;
   }
   async function config(): Promise<{ clientId: string; clientSecret: string } | null> {
@@ -131,7 +131,7 @@ export async function installGitHubRoutes(app: Express, repo: HostedRepository, 
   app.get("/github/oauth/approve", async (req, res) => {
     const tx = await repo.getAuthorizationTransaction(String(req.query.tx ?? ""));
     if (!tx || tx.resource !== resource.href) return page(res, "Authorization request expired", "<p>Start a fresh GitHub plugin connection.</p>", 400);
-    const user = await session(req, res); if (!user) return;
+    const user = await session(req, res, tx.id); if (!user) return;
     const connected = (await repo.pool.query("SELECT login FROM github_accounts WHERE user_id=$1", [user.userId])).rows[0];
     if (!connected) return page(res, "Connect GitHub first", '<p>Authorize GitHub, then restart the plugin connection.</p><a class="button" href="/mani_admin/github">GitHub settings</a>', 409);
     allowOAuthCallback(res, tx.redirectUri);
