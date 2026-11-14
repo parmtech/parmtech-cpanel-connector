@@ -51,8 +51,9 @@ Deprecated WHM access-hash authentication is not supported. cPanel and WHM are s
 
 - `cpanel_list_accounts` returns each profile's stable ID, label, host, username, and cPanel/WHM access level. Secrets are never returned.
 - `cpanel_list_domains`, `cpanel_list_email_accounts`, and `cpanel_list_files` read cPanel account data.
+- `cpanel_upload_file` uploads a small inline file or a public HTTPS file to cPanel with multipart UAPI. `cpanel_extract_archive` extracts an uploaded ZIP. See [the capability audit](docs/CPANEL-CAPABILITY-AUDIT.md) for size and source limits.
 - `cpanel_create_email_account` and `cpanel_delete_email_account` change cPanel mailboxes.
-- `cpanel_uapi_execute` exposes broad UAPI access and requires the `cpanel:write` grant.
+- `cpanel_uapi_execute` exposes broad UAPI GET/form POST access and requires the `cpanel:write` grant. `cpanel_api2_execute` covers legacy API 2 functions without UAPI equivalents.
 - `whm_api_read` offers an explicit read-only allowlist for common WHM API 1 functions.
 - `whm_api_execute` exposes broad WHM API 1 access and requires the `whm:write` grant. It can affect multiple accounts or the whole server.
 - `hosting_disconnect_connection` removes the encrypted local profile. In hosted settings, a saved token name enables an optional remote revoke through cPanel UAPI or WHM API 1; the hosting account must grant the corresponding token-management permission.

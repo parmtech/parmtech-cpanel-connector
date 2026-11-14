@@ -370,7 +370,7 @@ app.post("/mcp", requireBearerAuth({ verifier: oauth, expectedResource: resource
           : name === "whm_api_read" ? "whm:read"
             : ["cpanel_list_domains", "cpanel_list_email_accounts", "cpanel_list_files"].includes(name) ? "cpanel:read"
               : name === "hosting_disconnect_connection" ? "accounts:write"
-                : ["cpanel_create_email_account", "cpanel_delete_email_account", "cpanel_uapi_execute", "cpanel_disconnect_account"].includes(name) ? "cpanel:write" : ""
+                : ["cpanel_create_email_account", "cpanel_delete_email_account", "cpanel_upload_file", "cpanel_extract_archive", "cpanel_api2_execute", "cpanel_uapi_execute", "cpanel_disconnect_account"].includes(name) ? "cpanel:write" : ""
       : "";
     return !required || !scopes.has(required) ? { id: message?.id ?? null, required } : null;
   }).find(Boolean);

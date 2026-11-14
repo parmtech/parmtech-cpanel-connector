@@ -7,12 +7,34 @@ import { createCpanelMcpServer } from "../src/tools.js";
 import { UapiClient, type FetchLike } from "../src/uapi.js";
 
 const mockToken = "mock-token-never-use-in-production";
-const requests: Array<{ url: string; authorization: string | null }> = [];
+const requests: Array<{ url: string; authorization: string | null; method?: string; body?: BodyInit | null }> = [];
+let uploaded: { directory: string; filename: string; bytes: Uint8Array } | null = null;
 const mockFetch: FetchLike = async (input, init) => {
   const url = String(input);
   const authorization = new Headers(init?.headers).get("Authorization");
-  requests.push({ url, authorization });
+  requests.push({ url, authorization, method: init?.method, body: init?.body });
   const endpoint = new URL(url);
+  if (endpoint.hostname === "downloads.example.test") {
+    assert.equal(authorization, null);
+    assert.equal(init?.redirect, "error");
+    return new Response(Buffer.from([0x50, 0x4b, 0x03, 0x04, 0xaa]), { status: 200, headers: { "content-length": "5" } });
+  }
+  if (endpoint.pathname === "/json-api/cpanel") {
+    assert.equal(init?.method, "POST");
+    const parameters = init?.body as URLSearchParams;
+    assert.equal(parameters.get("cpanel_jsonapi_module"), "Fileman");
+    assert.equal(parameters.get("cpanel_jsonapi_func"), "fileop");
+    assert.equal(parameters.get("op"), "extract");
+    return Response.json({ cpanelresult: { event: { result: 1 }, data: [{ result: 1 }], module: "Fileman", func: "fileop" } });
+  }
+  if (endpoint.pathname.endsWith("/Fileman/upload_files")) {
+    assert.equal(init?.method, "POST");
+    assert.ok(init?.body instanceof FormData);
+    const file = init.body.get("file-1");
+    assert.ok(file instanceof File);
+    uploaded = { directory: String(init.body.get("dir")), filename: file.name, bytes: new Uint8Array(await file.arrayBuffer()) };
+    return Response.json({ apiversion: 3, module: "Fileman", func: "upload_files", result: { status: 1, data: {}, errors: null } });
+  }
   const payload = endpoint.pathname.endsWith("/DomainInfo/list_domains")
     ? { apiversion: 3, module: "DomainInfo", func: "list_domains", result: { status: 1, data: { main_domain: "example.test", addon_domains: [], sub_domains: [] }, errors: null } }
     : endpoint.pathname.endsWith("/Email/add_pop")
@@ -43,7 +65,7 @@ await mcpClient.connect(clientTransport);
 
 const toolList = await mcpClient.listTools();
 const toolNames = toolList.tools.map((tool) => tool.name);
-for (const required of ["cpanel_list_accounts", "cpanel_list_domains", "cpanel_list_email_accounts", "cpanel_list_files", "cpanel_create_email_account", "cpanel_delete_email_account", "cpanel_uapi_execute", "cpanel_disconnect_account"]) {
+for (const required of ["cpanel_list_accounts", "cpanel_list_domains", "cpanel_list_email_accounts", "cpanel_list_files", "cpanel_create_email_account", "cpanel_delete_email_account", "cpanel_upload_file", "cpanel_extract_archive", "cpanel_api2_execute", "cpanel_uapi_execute", "cpanel_disconnect_account"]) {
   assert.ok(toolNames.includes(required), `Missing MCP tool: ${required}`);
 }
 
@@ -64,6 +86,28 @@ assert.equal(created.isError, undefined);
 assert.doesNotMatch(JSON.stringify(created), /should-not-be-returned|temporary-test-value|mock-token-never-use-in-production/);
 assert.ok(requests.some((request) => request.url.includes("/execute/Email/add_pop") && request.url.includes("password=temporary-test-value")));
 assert.ok(requests.every((request) => request.authorization === `cpanel exampleuser:${mockToken}`));
+
+const posted = await mcpClient.callTool({ name: "cpanel_uapi_execute", arguments: { accountId: account.id, module: "Fileman", function: "list_files", method: "POST", parameters: { dir: "public_html", showdotfiles: 1 } } });
+assert.equal(posted.isError, undefined);
+const postRequest = requests.find(request => request.url.endsWith("/Fileman/list_files"));
+assert.equal(postRequest?.method, "POST");
+assert.equal((postRequest?.body as URLSearchParams).get("dir"), "public_html");
+
+const archiveBytes = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0xff]);
+const upload = await mcpClient.callTool({ name: "cpanel_upload_file", arguments: { accountId: account.id, directory: "public_html", filename: "product.zip", contentBase64: archiveBytes.toString("base64") } });
+assert.equal(upload.isError, undefined);
+assert.deepEqual(uploaded, { directory: "public_html", filename: "product.zip", bytes: new Uint8Array(archiveBytes) });
+assert.equal(JSON.parse((upload as unknown as { content: Array<{ text: string }> }).content[0]!.text).uploaded, true);
+const invalidUpload = await mcpClient.callTool({ name: "cpanel_upload_file", arguments: { accountId: account.id, directory: "public_html", filename: "../product.zip", contentBase64: archiveBytes.toString("base64") } });
+assert.equal(invalidUpload.isError, true);
+assert.equal(requests.filter(request => request.url.includes("/Fileman/upload_files")).length, 1);
+const remoteUpload = await mcpClient.callTool({ name: "cpanel_upload_file", arguments: { accountId: account.id, directory: "public_html", filename: "remote.zip", sourceUrl: "https://downloads.example.test/remote.zip" } });
+assert.equal(remoteUpload.isError, undefined);
+assert.deepEqual(uploaded, { directory: "public_html", filename: "remote.zip", bytes: new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0xaa]) });
+const unsafeSource = await mcpClient.callTool({ name: "cpanel_upload_file", arguments: { accountId: account.id, directory: "public_html", filename: "unsafe.zip", sourceUrl: "https://downloads.example.test/unsafe.zip?token=secret" } });
+assert.equal(unsafeSource.isError, true);
+const extracted = await mcpClient.callTool({ name: "cpanel_extract_archive", arguments: { accountId: account.id, archivePath: "/home/exampleuser/stage/product.zip", destinationDirectory: "/home/exampleuser/public_html" } });
+assert.equal(extracted.isError, undefined);
 
 await mcpClient.close();
 await mcpServer.close();
