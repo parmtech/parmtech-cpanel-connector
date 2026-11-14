@@ -4,7 +4,7 @@ import { Pool } from "pg";
 import nodemailer from "nodemailer";
 import { randomUUID } from "node:crypto";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
+import { hostHeaderValidation } from "@modelcontextprotocol/sdk/server/middleware/hostHeaderValidation.js";
 import { mcpAuthRouter } from "@modelcontextprotocol/sdk/server/auth/router.js";
 import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js";
 import { HostedRepository } from "./repository.js";
@@ -19,6 +19,7 @@ import { importOwnerConnection } from "./owner-import.js";
 import {renderPage,renderDashboard,renderField,renderHostingForm} from './presentation.js';
 import {setupCodeEmail,profileVerificationEmail} from './email-templates.js';
 import { securityHeaders, allowOAuthCallback } from "./security-policy.js";
+import { installGitHubRoutes } from "../github/routes.js";
 
 const baseText = process.env.PUBLIC_BASE_URL;
 if (!baseText) throw new Error("PUBLIC_BASE_URL must be configured for the hosted connector.");
@@ -52,11 +53,14 @@ pool.on("error", () => console.error("An idle database connection closed; subseq
 const repository = new HostedRepository(pool);
 await repository.initialize();
 const oauth = new HostedOAuthProvider(repository, resource, baseUrl);
-const app = createMcpExpressApp({ host: "0.0.0.0", allowedHosts: [baseUrl.host] });
+const app = express();
+app.use(hostHeaderValidation([baseUrl.host]));
+app.use(express.json({ limit: "1mb" }));
 app.disable("x-powered-by");
 app.set("trust proxy", process.env.TRUST_PROXY === "true" ? 1 : false);
 app.use(express.urlencoded({ extended: false, limit: "32kb" }));
 app.use(securityHeaders);
+await installGitHubRoutes(app, repository, baseUrl, getUser);
 app.get("/.well-known/oauth-authorization-server", (_req, res) => res.json({
   issuer: issuer.href,
   authorization_endpoint: new URL("/authorize", baseUrl).href,
@@ -174,7 +178,7 @@ app.post('/mani_admin/setup/finish',authBurstLimit,async(req,res)=>{
 app.get("/oauth/approve", async (req, res) => {
   const txId = typeof req.query.tx === "string" ? req.query.tx : "";
   const tx = await repository.getAuthorizationTransaction(txId);
-  if (!tx) return errorPage(res, "Authorization request expired", "This connection request is valid for 10 minutes and can only be used once. Start a new connection from your MCP client; refreshing this old page cannot renew it.", 400);
+  if (!tx || tx.resource !== resource.href) return errorPage(res, "Authorization request expired", "This connection request is valid for 10 minutes and can only be used once. Start a new connection from your MCP client; refreshing this old page cannot renew it.", 400);
   if(!await repository.adminConfigured()){
     res.cookie('parmtech_setup_tx',txId,{httpOnly:true,secure:secureCookie,sameSite:'lax',path:'/',maxAge:15*60*1000});
     return res.redirect(303,'/mani_admin');
@@ -256,7 +260,7 @@ app.get(['/mani_admin','/mani_admin/'], async (req, res) => {
   }
   const accounts = await repository.listAccounts(user.userId);
   const notice = req.query.disconnected === "1" ? `<p class="notice">Connection disconnected${req.query.revoked === "1" ? " and its remote token was revoked" : ""}.</p>` : "";
-  return res.type("html").send(page('Connection settings',renderDashboard(user,accounts,accountForm(user.csrf,'/accounts/add'),resource.href,notice)));
+  return res.type("html").send(page('Connection settings',renderDashboard(user,accounts,accountForm(user.csrf,'/accounts/add'),resource.href,notice + '<p><a href="/mani_admin/github">PARMTECH GitHub Connector settings →</a></p>')));
 });
 
 app.post("/accounts/add", accountLimit, async (req, res) => {
@@ -325,7 +329,7 @@ app.post("/oauth/consent", async (req, res) => {
   if (!user || !verifyCsrf(user, req.body)) return errorPage(res, "Sign in required", "Sign in again to authorize this connection.", 401);
   const txId = typeof req.body.tx === "string" ? req.body.tx : "";
   const tx = await repository.getAuthorizationTransaction(txId);
-  if (!tx) return errorPage(res, "Authorization request expired", "This connection request is valid for 10 minutes and can only be used once. Start a new connection from your MCP client; refreshing this old page cannot renew it.", 400);
+  if (!tx || tx.resource !== resource.href) return errorPage(res, "Authorization request expired", "This connection request is valid for 10 minutes and can only be used once. Start a new connection from your MCP client; refreshing this old page cannot renew it.", 400);
   if (!(await repository.listAccounts(user.userId)).length) return errorPage(res, "Hosting connection required", "Your sign-in is valid, but no hosting profile is saved for this account. Add a hosting connection in settings, then return to this authorization request.", 409);
   const submitted: string[] = Array.isArray(req.body.scope) ? req.body.scope.map(String) : [String(req.body.scope ?? "")];
   const scopes = [...new Set(submitted.filter((scope) => OAUTH_SCOPES.includes(scope) && tx.scopes.includes(scope)))];
