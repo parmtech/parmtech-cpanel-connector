@@ -180,7 +180,7 @@ app.post('/mani_admin/setup/finish',authBurstLimit,async(req,res)=>{
 app.get("/oauth/approve", async (req, res) => {
   const txId = typeof req.query.tx === "string" ? req.query.tx : "";
   const tx = await repository.getAuthorizationTransaction(txId);
-  if (!tx) return errorPage(res, "Authorization expired", "Restart the connector authorization from ChatGPT.", 400);
+  if (!tx) return errorPage(res, "Authorization request expired", "This connection request is valid for 10 minutes and can only be used once. Start a new connection from your MCP client; refreshing this old page cannot renew it.", 400);
   if(!await repository.adminConfigured()){
     res.cookie('parmtech_setup_tx',txId,{httpOnly:true,secure:secureCookie,sameSite:'lax',path:'/',maxAge:15*60*1000});
     return res.redirect(303,'/mani_admin');
@@ -330,7 +330,8 @@ app.post("/oauth/consent", async (req, res) => {
   if (!user || !verifyCsrf(user, req.body)) return errorPage(res, "Sign in required", "Sign in again to authorize this connection.", 401);
   const txId = typeof req.body.tx === "string" ? req.body.tx : "";
   const tx = await repository.getAuthorizationTransaction(txId);
-  if (!tx || !(await repository.listAccounts(user.userId)).length) return errorPage(res, "Authorization expired", "Restart authorization and add at least one hosting connection.");
+  if (!tx) return errorPage(res, "Authorization request expired", "This connection request is valid for 10 minutes and can only be used once. Start a new connection from your MCP client; refreshing this old page cannot renew it.", 400);
+  if (!(await repository.listAccounts(user.userId)).length) return errorPage(res, "Hosting connection required", "Your sign-in is valid, but no hosting profile is saved for this account. Add a hosting connection in settings, then return to this authorization request.", 409);
   const submitted: string[] = Array.isArray(req.body.scope) ? req.body.scope.map(String) : [String(req.body.scope ?? "")];
   const scopes = [...new Set(submitted.filter((scope) => OAUTH_SCOPES.includes(scope) && tx.scopes.includes(scope)))];
   const code = randomUUID() + randomUUID().replaceAll("-", "");
