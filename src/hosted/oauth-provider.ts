@@ -9,16 +9,17 @@ import { createId } from "./crypto.js";
 export const OAUTH_SCOPES = ["accounts:read", "accounts:write", "cpanel:read", "cpanel:write", "whm:read", "whm:write", "offline_access"];
 
 export class HostedOAuthProvider implements OAuthServerProvider {
-  constructor(private readonly repository: HostedRepository, readonly resource: URL, private readonly baseUrl: URL) {}
+  constructor(private readonly repository: HostedRepository, readonly resource: URL, private readonly baseUrl: URL,
+    private readonly policy = { scopes: OAUTH_SCOPES, defaults: ["accounts:read", "cpanel:read", "offline_access"], approvalPath: "/oauth/approve" }) {}
   get clientsStore() { return this.repository; }
 
   async authorize(client: OAuthClientInformationFull, params: AuthorizationParams, res: Response): Promise<void> {
     if (!params.resource || params.resource.href.replace(/\/$/, "") !== this.resource.href.replace(/\/$/, "")) throw new InvalidTargetError("OAuth resource does not match this MCP service.");
-    const scopes = params.scopes?.length ? params.scopes : ["accounts:read", "cpanel:read", "offline_access"];
-    if (scopes.some((scope) => !OAUTH_SCOPES.includes(scope))) throw new InvalidScopeError("Requested OAuth scope is not supported.");
+    const scopes = params.scopes?.length ? params.scopes : this.policy.defaults;
+    if (scopes.some((scope) => !this.policy.scopes.includes(scope))) throw new InvalidScopeError("Requested OAuth scope is not supported.");
     const id = createId();
     await this.repository.saveAuthorizationTransaction({ id, userId: "", clientId: client.client_id, redirectUri: params.redirectUri, codeChallenge: params.codeChallenge, resource: this.resource.href, scopes, ...(params.state ? { state: params.state } : {}) });
-    res.redirect(302, new URL(`/oauth/approve?tx=${encodeURIComponent(id)}`, this.baseUrl).href);
+    res.redirect(302, new URL(`${this.policy.approvalPath}?tx=${encodeURIComponent(id)}`, this.baseUrl).href);
   }
 
   async challengeForAuthorizationCode(client: OAuthClientInformationFull, authorizationCode: string): Promise<string> {
@@ -43,7 +44,7 @@ export class HostedOAuthProvider implements OAuthServerProvider {
     if (!resource || resource.href.replace(/\/$/, "") !== this.resource.href.replace(/\/$/, "") || existing.resource.replace(/\/$/, "") !== this.resource.href.replace(/\/$/, "")) throw new InvalidTargetError("OAuth resource does not match this MCP service.");
     if (scopes?.some((scope) => !existing.scopes.includes(scope))) throw new InvalidScopeError("Refresh token cannot increase its granted scopes.");
     const allowed = scopes?.length ? existing.scopes.filter((scope) => scopes.includes(scope)) : existing.scopes;
-    if (allowed.some((scope) => !OAUTH_SCOPES.includes(scope))) throw new InvalidScopeError("Requested OAuth scope is not supported.");
+    if (allowed.some((scope) => !this.policy.scopes.includes(scope))) throw new InvalidScopeError("Requested OAuth scope is not supported.");
     const tokens = await this.repository.rotateRefreshToken(refreshToken, { clientId: client.client_id, userId: existing.userId, resource: this.resource.href, scopes: allowed });
     return { access_token: tokens.access, ...(tokens.refresh ? { refresh_token: tokens.refresh } : {}), token_type: "Bearer", expires_in: 3600, scope: allowed.join(" ") };
   }

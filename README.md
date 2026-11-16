@@ -18,6 +18,14 @@ For a new deployment, configure the trusted owner email, database, mail and stab
 
 Use a client that supports remote MCP with OAuth. Client/account availability is governed by the client platform; check its current connection documentation. Installing the old local plugin does not automatically switch it to the hosted service. The owner's Codex configuration now has a separate `parmtech_hosted` remote entry; browser sign-in is required once to authorize it.
 
+### Google Play Console connector
+
+The separate Play Console MCP resource is `https://connector.parmtech.au/play/mcp`. It uses the same PARMTECH administrator login, with its own Play read/write grants. Its Google credential is stored encrypted and is never returned by an MCP tool.
+
+To connect: enable the [Google Play Developer API](https://developers.google.com/android-publisher/getting_started) in a Google Cloud project, create a service account, and invite that service account email in Play Console **Users and permissions** with only the app rights required. Save its JSON key at `/mani_admin/play` over HTTPS. Then add the Play MCP URL as a separate ChatGPT custom connection and approve its scopes. Use `play_connection_status` to verify Google token issuance and `play_check_app` with a real package name to verify Play Console access. The key can be removed from the same settings page. Never paste it into a chat or commit it to GitHub.
+
+The connector can read app data and make supported JSON Play Developer API changes, including edits, tracks, listings and reviews. The current MCP interface **does not upload binary AAB/APK files**, create a new Play app, or complete legal declarations. Use Play Console for a new app's first setup, and use a separate build/release pipeline for a bundle upload. A saved key and a successful Google token request alone do not prove permission for a particular app; `play_check_app` must pass before claiming that.
+
 ## Connection and authorization flow
 
 1. A user adds the hosted HTTPS MCP URL in ChatGPT and starts OAuth.
@@ -43,8 +51,10 @@ Deprecated WHM access-hash authentication is not supported. cPanel and WHM are s
 
 - `cpanel_list_accounts` returns each profile's stable ID, label, host, username, and cPanel/WHM access level. Secrets are never returned.
 - `cpanel_list_domains`, `cpanel_list_email_accounts`, and `cpanel_list_files` read cPanel account data.
+- `cpanel_upload_file` uploads a small inline file or a public HTTPS file to cPanel with multipart UAPI. `cpanel_extract_archive` extracts an uploaded ZIP. See [the capability audit](docs/CPANEL-CAPABILITY-AUDIT.md) for size and source limits.
+- The hosted connector also provides `cpanel_begin_file_upload`, `cpanel_append_file_chunk`, `cpanel_finish_file_upload`, and `cpanel_cancel_file_upload` for private files up to 128 MB, sent in 500 KB chunks. The client must have access to the file bytes; a bare path on the user's device is not enough for a remote server.
 - `cpanel_create_email_account` and `cpanel_delete_email_account` change cPanel mailboxes.
-- `cpanel_uapi_execute` exposes broad UAPI access and requires the `cpanel:write` grant.
+- `cpanel_uapi_execute` exposes broad UAPI GET/form POST access and requires the `cpanel:write` grant. `cpanel_api2_execute` covers legacy API 2 functions without UAPI equivalents.
 - `whm_api_read` offers an explicit read-only allowlist for common WHM API 1 functions.
 - `whm_api_execute` exposes broad WHM API 1 access and requires the `whm:write` grant. It can affect multiple accounts or the whole server.
 - `hosting_disconnect_connection` removes the encrypted local profile. In hosted settings, a saved token name enables an optional remote revoke through cPanel UAPI or WHM API 1; the hosting account must grant the corresponding token-management permission.
