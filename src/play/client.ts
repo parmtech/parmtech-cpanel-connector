@@ -9,6 +9,26 @@ export class PlayClient {
   private token?: { value: string; expiresAt: number };
   constructor(private readonly account: PlayServiceAccount) {}
 
+  /** Upload media to an existing edit; never assigns a track or commits it. */
+  async uploadBundle(packageName: string, editId: string, file: Blob, sha256: string) {
+    if (!/^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+$/.test(packageName) || !/^[A-Za-z0-9_-]{1,200}$/.test(editId)) throw Error("Invalid Play package or edit ID.");
+    if (!/^[0-9a-f]{64}$/.test(sha256) || !file.size || file.size > 1_000_000_000) throw Error("Invalid bundle size or SHA-256.");
+    const path = `/androidpublisher/v3/applications/${packageName}/edits/${editId}/bundles`;
+    // Recover a successful upload whose response/receipt was lost. Never retry POST automatically.
+    const existing = await this.request("GET", path) as { bundles?: { versionCode: number; sha256: string }[] };
+    const uploaded = existing.bundles?.find(bundle => bundle.sha256?.toLowerCase() === sha256);
+    if (uploaded) return uploaded;
+    const response = await fetch(`https://androidpublisher.googleapis.com/upload${path}?uploadType=media`, {
+      method: "POST", redirect: "error", signal: AbortSignal.timeout(300_000),
+      headers: { Authorization: `Bearer ${await this.accessToken()}`, "Content-Type": "application/octet-stream", "Content-Length": String(file.size), Accept: "application/json" },
+      body: file,
+    });
+    const data = await response.json() as { versionCode?: number; sha256?: string; error?: { message?: string } };
+    if (!response.ok) throw Error(`Google Play bundle upload failed (${response.status}). ${String(data.error?.message ?? "Check the edit, signing key and version code.").slice(0, 300)}`);
+    if (!Number.isSafeInteger(data.versionCode) || data.sha256?.toLowerCase() !== sha256) throw Error("Google Play bundle receipt did not match the uploaded SHA-256. Check the edit's bundles before retrying.");
+    return data;
+  }
+
   async accessToken(): Promise<string> {
     if (this.token && this.token.expiresAt > Date.now() + 60_000) return this.token.value;
     const now = Math.floor(Date.now() / 1000);

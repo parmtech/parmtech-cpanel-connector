@@ -14,6 +14,7 @@ import { renderPage } from "../hosted/presentation.js";
 import { allowOAuthCallback } from "../hosted/security-policy.js";
 import { createPlayMcpServer, PLAY_SCOPES } from "./tools.js";
 import type { PlayServiceAccount } from "./client.js";
+import { PlayBundleStore } from "./bundle-store.js";
 
 type Session = { userId: string; email: string; csrf: string };
 const esc = (v: unknown) => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -104,7 +105,7 @@ export async function installPlayRoutes(app: Express, repo: HostedRepository, ba
   app.post("/play/mcp", requireBearerAuth({ verifier: oauth, expectedResource: resource, resourceMetadataUrl: endpoint("/.well-known/oauth-protected-resource/play/mcp") }), express.json({ limit: "1mb" }), async (req, res) => {
     const userId = req.auth?.extra?.userId;
     if (typeof userId !== "string") return res.status(401).json({ error: "Invalid Play Console authorization." });
-    const server = createPlayMcpServer(() => serviceAccount(userId), new Set(req.auth?.scopes ?? []));
+    const server = createPlayMcpServer(() => serviceAccount(userId), new Set(req.auth?.scopes ?? []), new PlayBundleStore(userId));
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     res.on("close", () => { void transport.close(); void server.close(); });
     try { await server.connect(transport); await transport.handleRequest(req, res, req.body); }
