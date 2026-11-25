@@ -54,7 +54,7 @@ The guide includes a ready-to-copy prompt that asks an AI assistant to walk you 
 <details>
 <summary><strong>Before relying on the remote server</strong></summary>
 
-Remote hosting requires working email and a trusted HTTPS proxy. The hosted mode rejects private or loopback cPanel addresses. This alpha has no automated password recovery or encryption-key rotation and uses process-local rate limits, so run one app instance. Review the [security and operational limitations](SELF-HOSTING.md#troubleshooting-and-limits) before relying on it or offering it to other users.
+Remote hosting requires working email and a trusted HTTPS proxy. The hosted mode rejects private or loopback cPanel addresses. This alpha uses process-local rate limits, so run one app instance. Password recovery requires verified email; [offline key rotation](KEY-ROTATION.md) has important external-file limitations. Review the [security and operational limitations](SELF-HOSTING.md#troubleshooting-and-limits) before relying on it or offering it to other users.
 
 </details>
 

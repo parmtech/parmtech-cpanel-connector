@@ -37,6 +37,17 @@ export class HostedRepository {
         created_at timestamptz NOT NULL DEFAULT now()
       );
       CREATE INDEX IF NOT EXISTS setup_challenges_email_created ON setup_challenges(email,created_at);
+      CREATE TABLE IF NOT EXISTS password_recovery_challenges (
+        id uuid PRIMARY KEY,
+        email text NOT NULL,
+        code_hash text NOT NULL,
+        binding_hash text NOT NULL,
+        attempts integer NOT NULL DEFAULT 0,
+        expires_at timestamptz NOT NULL,
+        consumed_at timestamptz,
+        created_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS password_recovery_email_created ON password_recovery_challenges(email,created_at);
       CREATE TABLE IF NOT EXISTS cpanel_accounts (
         id uuid PRIMARY KEY,
         user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -135,6 +146,51 @@ export class HostedRepository {
       await client.query('COMMIT');return result.rows[0]!;
     }catch(error){await client.query('ROLLBACK');throw error;}
     finally{client.release();}
+  }
+
+  // Recovery is browser-bound and limited per email across processes. Only verified users receive mail.
+  async requestPasswordRecovery(email: string, binding: string): Promise<{id: string; code?: string}> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query("SELECT pg_advisory_xact_lock(hashtext('recovery:' || $1))", [email]);
+      const id = createId(), code = String(randomInt(100000000)).padStart(8, '0');
+      const recent = await client.query("SELECT COUNT(*) AS n FROM password_recovery_challenges WHERE email=$1 AND created_at>now()-interval '15 minutes'", [email]);
+      const verified = await client.query('SELECT 1 FROM users WHERE email=$1 AND email_verified=true', [email]);
+      if (Number(recent.rows[0].n) < 3) {
+        await client.query("INSERT INTO password_recovery_challenges(id,email,code_hash,binding_hash,expires_at) VALUES($1,$2,$3,$4,now()+interval '15 minutes')", [id,email,hashToken(`${id}:${binding}:${code}`),hashToken(binding)]);
+        await client.query('COMMIT');
+        return verified.rows.length ? {id, code} : {id};
+      }
+      await client.query('COMMIT'); return {id};
+    } catch (error) { await client.query('ROLLBACK'); throw error; }
+    finally { client.release(); }
+  }
+
+  async finishPasswordRecovery(id: string, code: string, binding: string, password: string): Promise<boolean> {
+    if (password.length < 12 || password.length > 256) throw Error('Password must contain 12–256 characters.');
+    const passwordHash = await hashPassword(password);
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const identity = await client.query('SELECT email FROM password_recovery_challenges WHERE id=$1', [id]);
+      if (!identity.rows[0]) { await client.query('COMMIT'); return false; }
+      await client.query("SELECT pg_advisory_xact_lock(hashtext('recovery:' || $1))", [identity.rows[0].email]);
+      const result = await client.query("SELECT * FROM password_recovery_challenges WHERE id=$1 AND binding_hash=$2 AND consumed_at IS NULL AND expires_at>now() AND attempts<5 FOR UPDATE", [id,hashToken(binding)]);
+      const challenge = result.rows[0];
+      if (!challenge) { await client.query('COMMIT'); return false; }
+      await client.query('UPDATE password_recovery_challenges SET attempts=attempts+1 WHERE id=$1', [id]);
+      if (!timingSafeEqual(Buffer.from(challenge.code_hash,'hex'), Buffer.from(hashToken(`${id}:${binding}:${code}`),'hex'))) { await client.query('COMMIT'); return false; }
+      const user = await client.query('UPDATE users SET password_hash=$1 WHERE email=$2 AND email_verified=true RETURNING id', [passwordHash, challenge.email]);
+      if (!user.rows[0]) { await client.query('COMMIT'); return false; }
+      const userId = user.rows[0].id;
+      await client.query('DELETE FROM web_sessions WHERE user_id=$1', [userId]);
+      await client.query('DELETE FROM oauth_tokens WHERE user_id=$1', [userId]);
+      await client.query('DELETE FROM oauth_codes WHERE user_id=$1', [userId]);
+      await client.query('UPDATE password_recovery_challenges SET consumed_at=now() WHERE email=$1 AND consumed_at IS NULL', [challenge.email]);
+      await client.query('COMMIT'); return true;
+    } catch (error) { await client.query('ROLLBACK'); throw error; }
+    finally { client.release(); }
   }
 
   async getClient(clientId: string): Promise<OAuthClientInformationFull | undefined> {

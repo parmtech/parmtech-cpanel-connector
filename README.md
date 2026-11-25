@@ -64,7 +64,7 @@ The deployer needs a stable HTTPS domain, a reverse proxy with TLS, Docker Compo
 
 The app rejects loopback/private host addresses and resolves and pins each outbound API request to a public DNS result, preventing a later DNS change from redirecting a request to a private address. Keep deployment-level egress filtering enabled as defense in depth. PostgreSQL contains AES-GCM-encrypted credentials bound to each user/profile ID and hashed OAuth/session tokens. Protect its volume and the encryption key with the same care as the hosting credentials; back up both independently.
 
-`CREDENTIAL_ENCRYPTION_KEY` must remain stable to decrypt existing profiles. Key rotation needs an explicit re-encryption migration and is not yet provided. This alpha currently uses process-local rate limits, so deploy a single app instance unless shared rate-limit storage is added. Before public multi-user operation, complete a security review, test against dedicated cPanel and WHM accounts, add support/privacy/terms pages, configure production monitoring and backups, and review the hosting provider's data-handling terms.
+`CREDENTIAL_ENCRYPTION_KEY` must remain stable to decrypt existing profiles. An [offline database key rotation procedure](docs/KEY-ROTATION.md) is available, with important limitations for external encrypted files. This alpha currently uses process-local rate limits, so deploy a single app instance unless shared rate-limit storage is added. Before public multi-user operation, complete a security review, test against dedicated cPanel and WHM accounts, add support/privacy/terms pages, configure production monitoring and backups, and review the hosting provider's data-handling terms.
 
 ## Local prototype
 

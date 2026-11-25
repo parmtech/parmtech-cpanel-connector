@@ -14,3 +14,9 @@ export function profileVerificationEmail(url:string):Message {
  return {subject:'Verify your PARMTECH connector profile',text:`Verify your connector profile using this link:\n${url}\n\nIf you did not request this, ignore this email.\n\nPARMTECH Hosting Connector`,
  html:shell('Confirm your connector profile',`<p style="line-height:1.8;color:#617186">Verify your email address to continue connecting your hosting account.</p><p style="margin:28px 0"><a href="${escapeHtml(url)}" style="display:inline-block;background:#176b73;color:white;padding:14px 22px;border-radius:8px;text-decoration:none;font-weight:bold">Verify email address</a></p><p style="font-size:12px;line-height:1.7;color:#617186">Use the browser where you started connecting. If the authorization has expired, start a new connection from your MCP client.</p>`)};
 }
+
+export function recoveryCodeEmail(code:string):Message {
+ if(!/^\d{8}$/.test(code))throw Error('Invalid recovery code');
+ return {subject:'Your connector password recovery code', text:`Your password recovery code is: ${code}\n\nIt expires in 15 minutes. Enter it in the browser where you requested it. Never share this code or your password in chat. If you did not request it, ignore this message.`,
+ html:shell('Reset your connector password',`<p>Enter this code in the browser where you requested it.</p><div style="padding:22px;background:#edf6f3;border:1px solid #cfe6dc;border-radius:10px;text-align:center;font-size:32px;letter-spacing:8px;font-weight:bold;color:#196d62">${code}</div><p>Valid for 15 minutes.</p>`)};
+}
