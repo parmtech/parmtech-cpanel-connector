@@ -10,7 +10,7 @@ Source repository: https://github.com/parmtech/parmtech-cpanel-connector (alpha 
 
 ## Start here
 
-**Setting up your own connector?** Follow the [self-hosting and local setup guide](docs/SELF-HOSTING.md) for step-by-step instructions and a copyable AI assistant prompt. Use your own cPanel credentials and infrastructure; the PARMTECH hosted endpoint is owner-restricted.
+**Setting up your own connector?** Start with the [connector wiki](docs/WIKI.md), then follow the [self-hosting and local setup guide](docs/SELF-HOSTING.md) for step-by-step instructions and a copyable AI assistant prompt. Use your own cPanel credentials and infrastructure; the PARMTECH hosted endpoint is owner-restricted.
 
 Open [the standalone guide](docs/START-HERE.html), read [the complete guide](docs/COMPLETE-GUIDE.md), or use [the quickstart](docs/QUICKSTART.md). First-time owner setup and later login are at `/mani_admin`. The connector hostname's root redirects to the configured official website. No default/shared administrator password is supplied.
 
