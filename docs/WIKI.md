@@ -1,33 +1,72 @@
-![PARMTECH cPanel Connector](../assets/connector-banner.png)
+![PARMTECH cPanel Connector — your hosting, your credentials](../assets/connector-banner.png)
 
 # Your hosting. Your connector.
 
-Connect a compatible MCP client to **your own cPanel account** using a connector you run yourself. The open-source project is an **alpha**. PARMTECH's hosted endpoint is owner-restricted; this guide does not require it.
+Connect a compatible AI or MCP client to **your own cPanel account** with software you run yourself. Choose a local setup for your computer or host your own remote OAuth server.
 
-> **Start here:** [Open the step-by-step setup guide](https://github.com/parmtech/parmtech-cpanel-connector/blob/main/docs/SELF-HOSTING.md) · [Copy the AI assistant prompt](https://github.com/parmtech/parmtech-cpanel-connector/blob/main/docs/SELF-HOSTING.md#copyable-prompt-for-your-ai-assistant)
+**[Read the setup guide →](SELF-HOSTING.md)** &nbsp; · &nbsp; **[Copy the AI assistant prompt →](SELF-HOSTING.md#copyable-prompt-for-your-ai-assistant)** &nbsp; · &nbsp; [Troubleshooting](SELF-HOSTING.md#troubleshooting-and-limits)
 
-## Choose how to run it
+> [!IMPORTANT]
+> This project is **alpha software**. PARMTECH's hosted endpoint is owner-restricted; setting up your own connector does not use it. Client support and availability vary.
 
-| | Local prototype | Your own remote server |
-|---|---|---|
-| Good for | A compatible client on your computer | A compatible remote MCP client |
-| You need | Node.js 22.19+, npm, an OS credential store | Your HTTPS domain, Docker Compose, reverse proxy, SMTP and PostgreSQL storage |
-| Hosting access | cPanel API token | cPanel or WHM; API token recommended |
-| Runs | On your computer | On infrastructure you operate |
+---
 
-The local prototype is cPanel-only and its loopback HTTP endpoint has no OAuth: do not expose it publicly. The remote server uses its own connector login and OAuth. Client compatibility and availability vary.
+## Choose your setup
 
-## Get started
+| 🖥️ Local prototype | ☁️ Your own remote server |
+|:---|:---|
+| Run on your computer for a compatible local MCP client. | Run on infrastructure you control for a compatible remote MCP client. |
+| **Needs:** Node.js 22.19+, npm and an OS credential store. | **Needs:** your HTTPS domain, Docker Compose, reverse proxy, SMTP and PostgreSQL storage. |
+| **Access:** cPanel API token. | **Access:** cPanel or WHM; an API token is recommended. |
+| **[Set up locally →](SELF-HOSTING.md#option-a-run-locally)** | **[Set up a remote server →](SELF-HOSTING.md#option-b-host-your-own-remote-connector)** |
 
-1. Create a dedicated API token in **your own cPanel** and note your server hostname and cPanel username. Your hosting provider's interface and permissions may vary.
-2. Follow the [local setup](https://github.com/parmtech/parmtech-cpanel-connector/blob/main/docs/SELF-HOSTING.md#option-a-run-locally) or [remote setup](https://github.com/parmtech/parmtech-cpanel-connector/blob/main/docs/SELF-HOSTING.md#option-b-host-your-own-remote-connector) instructions. Use your own server and domain for the remote route.
-3. Enter your token in the local hidden prompt or your own connector's HTTPS settings form. **Never paste a token, password, verification code or encryption key into an AI chat or GitHub issue.**
-4. Connect a compatible MCP client and start with read-only requests, such as listing connected accounts and domains. Grant write permissions only when needed.
+The local prototype is cPanel-only. Its loopback HTTP endpoint has no OAuth and **must not be exposed publicly**. The remote server has its own connector login and OAuth flow. The two modes do not share saved accounts.
 
-## What to know
+## From cPanel to your client
 
-The server operator can decrypt saved hosting credentials. Keep the server, database backups and stable encryption key private. Remote hosting requires working email and a trusted HTTPS proxy; the hosted mode rejects private or loopback cPanel addresses. This alpha has no automated password recovery or encryption-key rotation and uses process-local rate limits, so run one app instance. Review the [security and operational limitations](https://github.com/parmtech/parmtech-cpanel-connector/blob/main/docs/SELF-HOSTING.md#troubleshooting-and-limits) before relying on it or offering it to other users.
+**1 · Prepare your account**
 
-[Complete guide](https://github.com/parmtech/parmtech-cpanel-connector/blob/main/docs/COMPLETE-GUIDE.md) · [Security policy](https://github.com/parmtech/parmtech-cpanel-connector/blob/main/SECURITY.md) · [Source code](https://github.com/parmtech/parmtech-cpanel-connector)
+Create a dedicated API token in **your own cPanel**. Note your server hostname and cPanel username. Your hosting provider's interface and permissions may vary.
 
-PARMTECH is independent. cPanel® and WHM® are third-party trademarks; this project is not presented as an official cPanel product.
+**2 · Set up your connector**
+
+Follow the [local](SELF-HOSTING.md#option-a-run-locally) or [remote](SELF-HOSTING.md#option-b-host-your-own-remote-connector) instructions. For remote access, use a server and domain you control.
+
+**3 · Add your hosting profile**
+
+Enter the token in the local hidden prompt or your own connector's HTTPS settings form. The connector validates the credentials before saving them.
+
+**4 · Connect and explore**
+
+Connect a compatible MCP client and begin with read-only requests, such as listing connected accounts and domains. Grant write permissions only when needed.
+
+> [!CAUTION]
+> Never paste API tokens, passwords, verification codes, encryption keys or private configuration into an AI chat or GitHub issue. Keep your connector server, database backups and encryption key private: the server operator can decrypt saved hosting credentials.
+
+---
+
+## Need a hand?
+
+The guide includes a ready-to-copy prompt that asks an AI assistant to walk you through setup without requesting your secrets.
+
+**[Open the copyable assistant prompt →](SELF-HOSTING.md#copyable-prompt-for-your-ai-assistant)**
+
+<details>
+<summary><strong>Before relying on the remote server</strong></summary>
+
+Remote hosting requires working email and a trusted HTTPS proxy. The hosted mode rejects private or loopback cPanel addresses. This alpha has no automated password recovery or encryption-key rotation and uses process-local rate limits, so run one app instance. Review the [security and operational limitations](SELF-HOSTING.md#troubleshooting-and-limits) before relying on it or offering it to other users.
+
+</details>
+
+<details>
+<summary><strong>More documentation</strong></summary>
+
+- [Complete setup and user guide](COMPLETE-GUIDE.md)
+- [Security policy](../SECURITY.md)
+- [Source code](https://github.com/parmtech/parmtech-cpanel-connector)
+
+</details>
+
+---
+
+<sub>PARMTECH is independent. cPanel® and WHM® are third-party trademarks; this project is not presented as an official cPanel product.</sub>
