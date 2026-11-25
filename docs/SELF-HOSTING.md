@@ -68,7 +68,7 @@ These steps assume a Linux server with Git, Docker Compose, a TLS reverse proxy,
    - `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_REQUIRE_TLS`, `SMTP_USER`, `SMTP_PASSWORD`, and `MAIL_FROM` for your mail provider. Docker normally needs SMTP; match its TLS settings. Quote or escape special characters according to Docker Compose `.env` syntax.
    - Set `TRUST_PROXY=true` only if the app is reached through a trusted reverse proxy that overwrites forwarded headers. Otherwise leave it `false`.
 
-   Back up the encryption key and database separately and securely. Losing the original key makes existing stored profiles unreadable; key rotation is not yet provided. Do not commit or upload `.env`.
+   Back up the encryption key and database separately and securely. Losing the original key makes existing stored profiles unreadable; an offline database-only key rotation procedure is available with significant precautions; see [key rotation](KEY-ROTATION.md). Do not commit or upload `.env`.
 3. Configure your reverse proxy to terminate HTTPS for your own domain and forward requests to `127.0.0.1:3210`. Ensure DNS, certificate renewal, Web/HTTP streaming, and forwarded headers work. Do not publish the PostgreSQL port, log request bodies or authorization headers, or expose port 3210 publicly. Restrict outbound traffic to legitimate public hosting servers where practical. The Compose file binds the application to loopback and keeps PostgreSQL on its private network.
 4. Start your own services:
 
@@ -96,7 +96,7 @@ These steps assume a Linux server with Git, Docker Compose, a TLS reverse proxy,
 - **Local keyring fails:** unlock/configure your OS credential store and run setup and client as the same user.
 - **Disconnected account:** removing a saved profile is separate from revoking its token at your hosting provider. Revoke compromised or unused tokens in cPanel.
 
-This alpha uses process-local rate limits: run one app instance. Automated password recovery and encryption-key rotation are not provided. Before offering it to other users, conduct a security review and add appropriate recovery, monitoring, backup/restore, abuse controls and privacy/support arrangements. Real hosting access and email delivery depend on your provider. See the [complete guide](COMPLETE-GUIDE.md) and [security policy](../SECURITY.md).
+This alpha uses process-local rate limits: run one app instance. Password recovery requires verified email and revokes existing sessions and OAuth grants. Offline database-only key rotation has important external-file and backup limitations; see [key rotation](KEY-ROTATION.md). Before offering it to other users, conduct a security review and add appropriate recovery, monitoring, backup/restore, abuse controls and privacy/support arrangements. Real hosting access and email delivery depend on your provider. See the [complete guide](COMPLETE-GUIDE.md) and [security policy](../SECURITY.md).
 
 ## Copyable prompt for your AI assistant
 

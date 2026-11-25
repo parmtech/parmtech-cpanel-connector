@@ -21,6 +21,8 @@
     "validate:http": "tsx scripts/smoke-http.ts",
     "test": "npm run build && npm run validate:mock && tsx scripts/validate-local.ts && node scripts/validate-cpanel.cjs && tsx scripts/validate-owner-import.ts && node scripts/validate-installers.cjs && tsx scripts/validate-presentation.ts && tsx scripts/validate-oauth-policy.ts",
     "test:setup-db": "tsx scripts/validate-first-admin-db.ts",
+    "test:security-db": "tsx scripts/validate-recovery-rotation-db.ts",
+    "test:setup-http-db": "npm run build && node dist/scripts/validate-setup-http-db.js",
     "package:full": "python scripts/build-distribution.py"
   },
   "dependencies": {

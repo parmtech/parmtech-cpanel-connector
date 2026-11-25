@@ -1,5 +1,5 @@
 import express, { type Request, type Response, type NextFunction } from "express";
-import { rateLimit } from "express-rate-limit";
+import { rateLimit, ipKeyGenerator } from "express-rate-limit";
 import { Pool } from "pg";
 import nodemailer from "nodemailer";
 import { randomUUID } from "node:crypto";
@@ -17,7 +17,7 @@ import type { AccountCredentials } from "../types.js";
 import { publicEgressFetch, resolvePublicHost } from "./outbound.js";
 import { importOwnerConnection } from "./owner-import.js";
 import {renderPage,renderDashboard,renderField,renderHostingForm} from './presentation.js';
-import {setupCodeEmail,profileVerificationEmail} from './email-templates.js';
+import {setupCodeEmail,profileVerificationEmail,recoveryCodeEmail} from './email-templates.js';
 import { securityHeaders, allowOAuthCallback } from "./security-policy.js";
 
 const baseText = process.env.PUBLIC_BASE_URL;
@@ -52,7 +52,7 @@ pool.on("error", () => console.error("An idle database connection closed; subseq
 const repository = new HostedRepository(pool);
 await repository.initialize();
 const oauth = new HostedOAuthProvider(repository, resource, baseUrl);
-const app = createMcpExpressApp({ host: "0.0.0.0", allowedHosts: [baseUrl.host] });
+const app = createMcpExpressApp({ host: "0.0.0.0", allowedHosts: [baseUrl.hostname] });
 app.disable("x-powered-by");
 app.set("trust proxy", process.env.TRUST_PROXY === "true" ? 1 : false);
 app.use(express.urlencoded({ extended: false, limit: "32kb" }));
@@ -80,7 +80,7 @@ app.use(mcpAuthRouter({
 const authBurstLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: true, legacyHeaders: false });
 const registrationLimit = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false });
 const accountLimit = rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
-const mcpLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 600, standardHeaders: true, legacyHeaders: false, keyGenerator: (req) => typeof req.auth?.extra?.userId === "string" ? req.auth.extra.userId : req.ip ?? "unknown" });
+const mcpLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 600, standardHeaders: true, legacyHeaders: false, keyGenerator: (req) => typeof req.auth?.extra?.userId === "string" ? req.auth.extra.userId : ipKeyGenerator(req.ip ?? "unknown") });
 
 type UserSession = { userId: string; email: string; csrf: string };
 function escapeHtml(value: unknown): string {
@@ -183,7 +183,7 @@ app.get("/oauth/approve", async (req, res) => {
   if (!user) {
     const csrf = randomUUID();
     res.cookie("parmtech_form_csrf", csrf, { httpOnly: false, secure: secureCookie, sameSite: "lax", path: "/", maxAge: 15 * 60 * 1000 });
-    return res.type("html").send(page("Connect PARMTECH", `<p>Sign in or create your PARMTECH connector profile. Your hosting secrets are entered only after sign-in and are never sent in ChatGPT conversation text.</p><form method="post" action="/oauth/signup">${formField("Email", "email", "email", true, "email")}${formField("Password (12 characters minimum)", "password", "password", true, "new-password")}<input type="hidden" name="tx" value="${escapeHtml(txId)}"><input type="hidden" name="csrf" value="${csrf}"><button>Create profile</button></form><hr><form method="post" action="/oauth/login">${formField("Email", "email", "email", true, "email")}${formField("Password", "password", "password", true, "current-password")}<input type="hidden" name="tx" value="${escapeHtml(txId)}"><input type="hidden" name="csrf" value="${csrf}"><button>Sign in</button></form>`));
+    return res.type("html").send(page("Connect PARMTECH", `<p>Sign in or create your PARMTECH connector profile. Your hosting secrets are entered only after sign-in and are never sent in ChatGPT conversation text.</p><form method="post" action="/oauth/signup">${formField("Email", "email", "email", true, "email")}${formField("Password (12 characters minimum)", "password", "password", true, "new-password")}<input type="hidden" name="tx" value="${escapeHtml(txId)}"><input type="hidden" name="csrf" value="${csrf}"><button>Create profile</button></form><hr><form method="post" action="/oauth/login">${formField("Email", "email", "email", true, "email")}${formField("Password", "password", "password", true, "current-password")}<input type="hidden" name="tx" value="${escapeHtml(txId)}"><input type="hidden" name="csrf" value="${csrf}"><button>Sign in</button></form><p><a href="/recovery">Forgot password?</a></p>`));
   }
   const accounts = await repository.listAccounts(user.userId);
   if (!accounts.length) return res.type("html").send(page("Add a hosting connection", `<p class="notice">No hosting connection is configured. Add one here to complete the OAuth connection.</p>${accountForm(user.csrf, `/accounts/add?tx=${encodeURIComponent(txId)}`)}`));
@@ -201,7 +201,7 @@ app.post("/oauth/signup", registrationLimit, async (req, res) => {
   const password = typeof req.body.password === "string" ? req.body.password : "";
   const allowedEmails = process.env.REGISTRATION_ALLOWED_EMAILS?.split(",").map(email => email.trim().toLowerCase()).filter(Boolean);
   if (allowedEmails && !allowedEmails.includes(email)) return errorPage(res, "Registration unavailable", "This connector is restricted to its configured owner.", 403);
-  if (!tx || req.body.csrf !== readCookie(req, "parmtech_form_csrf") || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 12 || password.length > 256) return errorPage(res, "Could not create profile", "Check the email and use a password between 12 and 256 characters.");
+  if (!tx || !readCookie(req, "parmtech_form_csrf") || req.body.csrf !== readCookie(req, "parmtech_form_csrf") || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 12 || password.length > 256) return errorPage(res, "Could not create profile", "Check the email and use a password between 12 and 256 characters.");
   if (!mailer || !process.env.MAIL_FROM) return errorPage(res, "Email verification is not configured", "The service administrator must configure SMTP and MAIL_FROM before enabling new profiles.", 503);
   try {
     const created = await repository.createUser(email, password);
@@ -226,7 +226,7 @@ app.get("/verify", async (req, res) => {
 
 app.post("/oauth/login", authBurstLimit, async (req, res) => {
   const tx = typeof req.body.tx === "string" ? req.body.tx : "";
-  if (!(await repository.getAuthorizationTransaction(tx)) || req.body.csrf !== readCookie(req, "parmtech_form_csrf")) return errorPage(res, "Authorization expired", "Restart the connector authorization.");
+  if (!(await repository.getAuthorizationTransaction(tx)) || !readCookie(req, "parmtech_form_csrf") || req.body.csrf !== readCookie(req, "parmtech_form_csrf")) return errorPage(res, "Authorization expired", "Restart the connector authorization.");
   const user = await repository.authenticate(String(req.body.email ?? ""), String(req.body.password ?? ""));
   if (!user || !(await repository.isEmailVerified(user.id))) return errorPage(res, "Sign in failed", "Check your sign-in details or verify your email first.", 401);
   const session = await repository.createSession(user.id);
@@ -234,8 +234,34 @@ app.post("/oauth/login", authBurstLimit, async (req, res) => {
   res.redirect(302, `/oauth/approve?tx=${encodeURIComponent(tx)}`);
 });
 
+app.get('/recovery', (req,res) => {
+ const csrf = adminFormCsrf(req,res);
+ return res.type('html').send(page('Recover your connector password', `<p>Enter the email of your verified connector profile. Keep this browser open.</p><form method="post" action="/recovery/request">${formField('Email','email','email',true,'email')}<input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button>Send recovery code</button></form>`));
+});
+app.post('/recovery/request', registrationLimit, async (req,res) => {
+ const binding = readCookie(req,'parmtech_form_csrf');
+ if (!binding || req.body.csrf !== binding) return errorPage(res,'Form expired','Reload the recovery page and try again.',403);
+ const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+ if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return errorPage(res,'Check email','Enter a valid email address.');
+ if (!mailer || !process.env.MAIL_FROM) return errorPage(res,'Email delivery unavailable','Contact the connector operator.',503);
+ const challenge = await repository.requestPasswordRecovery(email,binding);
+ if (challenge.code) {
+   try { await mailer.sendMail({from:process.env.MAIL_FROM,to:email,...recoveryCodeEmail(challenge.code)}); }
+   catch { console.error('Recovery email delivery failed.'); }
+ }
+ return res.type('html').send(page('Check your email', `<p>If a verified profile exists, a code may arrive. It expires in 15 minutes. Keep this browser open.</p><form method="post" action="/recovery/finish"><input type="hidden" name="csrf" value="${escapeHtml(binding)}"><input type="hidden" name="challenge" value="${escapeHtml(challenge.id)}">${formField('Email code (8 digits)','code','text',true,'one-time-code')}${formField('New password (12–256 characters)','password','password',true,'new-password')}${formField('Confirm new password','confirm','password',true,'new-password')}<button>Reset password</button></form>`));
+});
+app.post('/recovery/finish', authBurstLimit, async (req,res) => {
+ const binding=readCookie(req,'parmtech_form_csrf'), id=String(req.body.challenge??''), code=String(req.body.code??''), password=String(req.body.password??'');
+ if (!binding || req.body.csrf!==binding) return errorPage(res,'Form expired','Restart password recovery.',403);
+ if (!/^[a-f0-9-]{36}$/i.test(id) || !/^\d{8}$/.test(code) || password.length<12 || password.length>256 || password!==req.body.confirm) return errorPage(res,'Check recovery details','Use the eight-digit code and matching passwords of 12–256 characters.');
+ if (!await repository.finishPasswordRecovery(id,code,binding,password)) return errorPage(res,'Recovery code unavailable','The code is incorrect, expired or already used. Start again.');
+ res.clearCookie('parmtech_session',{path:'/'});
+ return res.type('html').send(page('Password changed','<p>Sign in again. Existing connector sessions and OAuth grants were revoked; reconnect your clients.</p><a href="/mani_admin">Go to sign in</a>'));
+});
+
 app.post("/profile/login", authBurstLimit, async (req, res) => {
-  if (req.body.csrf !== readCookie(req, "parmtech_form_csrf")) return errorPage(res, "Sign-in form expired", "Reload the sign-in page and try again.", 403);
+  if (!readCookie(req, "parmtech_form_csrf") || req.body.csrf !== readCookie(req, "parmtech_form_csrf")) return errorPage(res, "Sign-in form expired", "Reload the sign-in page and try again.", 403);
   const user = await repository.authenticate(String(req.body.email ?? ""), String(req.body.password ?? ""));
   if (!user || !(await repository.isEmailVerified(user.id))) return errorPage(res, "Sign-in failed", "Check your sign-in details or verify your email first.", 401);
   const session = await repository.createSession(user.id);
@@ -252,7 +278,7 @@ app.get(['/mani_admin','/mani_admin/'], async (req, res) => {
   const user = await getUser(req);
   if (!user) {
     const csrf=adminFormCsrf(req,res);
-    return res.type('html').send(page('Admin login',`<p>Sign in using the email and password created during first-time setup. This is not your cPanel password.</p><form method="post" action="/profile/login">${formField('Email','email','email',true,'email')}${formField('Password','password','password',true,'current-password')}<input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button>Sign in</button></form>`));
+    return res.type('html').send(page('Admin login',`<p>Sign in using the email and password created during first-time setup. This is not your cPanel password.</p><form method="post" action="/profile/login">${formField('Email','email','email',true,'email')}${formField('Password','password','password',true,'current-password')}<input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button>Sign in</button></form><p><a href="/recovery">Forgot password?</a></p>`));
   }
   const accounts = await repository.listAccounts(user.userId);
   const notice = req.query.disconnected === "1" ? `<p class="notice">Connection disconnected${req.query.revoked === "1" ? " and its remote token was revoked" : ""}.</p>` : "";

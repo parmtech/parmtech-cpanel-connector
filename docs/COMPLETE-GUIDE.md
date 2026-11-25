@@ -48,7 +48,7 @@ The code expires after15minutes, is bound to the requesting browser and permits 
 
 The trusted setup email is chosen during server installation, not by an unauthenticated visitor. A self-hoster supplies their own email in the private configuration. If mail delivery is not configured, setup does not create an administrator without verification.
 
-An owner email change after setup does not reset the existing administrator. Do not erase the database to change a password. Automated password-recovery UI is not included in this alpha; recovery requires an authenticated operator procedure and must be completed before a general public hosted launch.
+An owner email change after setup does not reset the existing administrator. Do not erase the database to change a password. For a verified profile, use the “Forgot password?” link and the code emailed to the original browser. Recovery revokes existing connector sessions and OAuth tokens, so clients must reconnect. SMTP must be working; profile credentials are preserved.
 
 ## 5. Add or migrate a hosting connection
 
@@ -203,7 +203,7 @@ The source repository is https://github.com/parmtech/parmtech-cpanel-connector, 
 
 Public ChatGPT distribution is a separate submission/review process, not a consequence of creating a GitHub repository or ZIP. Review current [plugin guidance](https://developers.openai.com/plugins/quickstart), [Apps SDK submission guidance](https://developers.openai.com/apps-sdk/deploy/submission/) and the platform's actual integration path. Prepare working reviewer access, accurate tool scopes, privacy/support/terms pages, ownership/branding and failure/revocation tests. No public ChatGPT listing or directory approval is claimed.
 
-Before opening a general public hosted service, complete independent security/tenant-isolation review, password recovery, monitoring, backup/restore drills, abuse controls and real cPanel/WHM acceptance. The current production owner allowlist remains unchanged.
+Before opening a general public hosted service, complete independent security/tenant-isolation review, recovery acceptance testing, monitoring, backup/restore drills, abuse controls and real cPanel/WHM acceptance. The current production owner allowlist remains unchanged.
 
 ## 15. Validation and limits
 
