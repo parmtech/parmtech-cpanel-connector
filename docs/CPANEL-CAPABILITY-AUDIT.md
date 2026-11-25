@@ -17,6 +17,8 @@ Reference for source version **0.2.0-alpha.4**, updated 25 November 2026. This d
 | Shell or SSH terminal | Not provided by cPanel UAPI/API 2/WHM tools. |
 | Arbitrary remote binary download | No general MCP streaming download tool. Optional browser download below is restricted to a shared local filesystem. |
 
+The 1,000,000,000-byte ceiling is the connector’s staging limit, not a guarantee from the hosting provider. An MCP client or app can enforce a lower cached tool-schema limit before a request reaches the connector. If supported, refresh its tool definitions and check the limit it advertises; refreshing does not change the provider’s restrictions. Do not cancel someone else’s staged upload to test.
+
 The assistant must actually have access to a file’s bytes to send MCP chunks. A path on another computer or an attachment the client cannot read is insufficient. Browser upload offers a direct file picker. Transfers remain subject to hosting free space, per-request limits and network interruptions. A completed API response should be followed by a destination filename/size check when practical.
 
 ## Optional browser download
