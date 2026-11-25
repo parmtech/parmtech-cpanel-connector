@@ -278,13 +278,11 @@ export class HostedRepository {
       const { rows } = await client.query<{ user_id: string }>("DELETE FROM oauth_tokens WHERE token_hash=$1 AND token_type='refresh' AND client_id=$2 AND expires_at>now() RETURNING user_id", [hashToken(oldRefresh), input.clientId]);
       if (!rows[0] || rows[0].user_id !== input.userId) throw new Error("Refresh token is invalid or expired.");
       const access = opaqueToken();
-      if (input.scopes.includes("offline_access")) {
-        const refresh = opaqueToken();
-        await client.query("INSERT INTO oauth_tokens(token_hash,client_id,user_id,token_type,resource,scopes,expires_at) VALUES($1,$2,$3,'access',$4,$5,now()+interval '1 hour'),($6,$2,$3,'refresh',$4,$5,now()+interval '30 days')", [hashToken(access), input.clientId, input.userId, input.resource, input.scopes, hashToken(refresh)]);
-        await client.query("COMMIT"); return { access, refresh };
-      }
-      await client.query("INSERT INTO oauth_tokens(token_hash,client_id,user_id,token_type,resource,scopes,expires_at) VALUES($1,$2,$3,'access',$4,$5,now()+interval '1 hour')", [hashToken(access), input.clientId, input.userId, input.resource, input.scopes]);
-      await client.query("COMMIT"); return { access };
+      // A valid refresh token already carries the user's persistent-access
+      // consent. Narrowing API scopes must not break subsequent renewals.
+      const refresh = opaqueToken();
+      await client.query("INSERT INTO oauth_tokens(token_hash,client_id,user_id,token_type,resource,scopes,expires_at) VALUES($1,$2,$3,'access',$4,$5,now()+interval '1 hour'),($6,$2,$3,'refresh',$4,$5,now()+interval '30 days')", [hashToken(access), input.clientId, input.userId, input.resource, input.scopes, hashToken(refresh)]);
+      await client.query("COMMIT"); return { access, refresh };
     } catch (error) { await client.query("ROLLBACK"); throw error; }
     finally { client.release(); }
   }

@@ -12,12 +12,12 @@ Run the connector on infrastructure you control, with **your own cPanel host, us
 | Hosting access | cPanel API token; no WHM | cPanel or WHM; token recommended |
 | Security | Local credential store; loopback HTTP has no OAuth and must not be exposed | Connector login, OAuth and encrypted stored profiles; the server operator can decrypt them |
 
-The two installations do not share saved accounts. The local HTTP/tunnel experiment is not a public OAuth server. Client support and availability vary; a public listing is not implied.
+See [client setup](CLIENT-SETUP.md) for supported configuration paths, cloud distinctions and verification. The two installations do not share saved accounts. The local HTTP/tunnel experiment is not a public OAuth server. Client support and availability vary; a public listing is not implied.
 
 ## Before you begin
 
 1. In **your own cPanel**, find **Security → Manage API Tokens** and create a dedicated token. Record its value in a password manager; cPanel may show it only once. Your host's interface or policy may differ. Use permissions appropriate to the task.
-2. Note your cPanel server hostname (for example `server.yourhost.com`, without a `/cpsess...` path), cPanel username, and token name. cPanel uses HTTPS port 2083. Your host must allow the API connection and its TLS certificate must be valid.
+2. Note your cPanel server hostname (for example `cpanel.host.example`, without a `/cpsess...` path), cPanel username, and token name. cPanel uses HTTPS port 2083. Your host must allow the API connection and its TLS certificate must be valid.
 3. Never put tokens, passwords, verification codes, database credentials, encryption keys, or private configuration in an AI chat, issue, command line, screenshot, or Git repository. Enter the hosting token only in the local hidden prompt or your own connector's HTTPS form. Treat access to your connector server and backups as access to its saved credentials.
 
 ## Option A: run locally
@@ -60,8 +60,8 @@ These steps assume a Linux server with Git, Docker Compose, a TLS reverse proxy,
 
 2. Edit `.env` in a private editor on the server. Set:
 
-   - `PUBLIC_BASE_URL` to your HTTPS origin, for example `https://connector.your-domain.com`, with no path or trailing `/mcp`.
-   - `COMPANY_SITE_URL` to an HTTPS website you control; the root redirects there. The example otherwise points to PARMTECH.
+   - `PUBLIC_BASE_URL` to your HTTPS origin, for example `https://connector.example.com`, with no path or trailing `/mcp`.
+   - `COMPANY_SITE_URL` to an HTTPS website you control; the root redirects there.
    - `SETUP_OWNER_EMAIL` and `REGISTRATION_ALLOWED_EMAILS` to your own email address. Keep the allowlist restricted for a private installation.
    - `POSTGRES_PASSWORD` to a long unique random password. Use a value compatible with Compose `.env` syntax; avoid unescaped `$` and `#`.
    - `CREDENTIAL_ENCRYPTION_KEY` to a unique 32-byte base64 key. Generate one locally with `openssl rand -base64 32` and enter it in the private file. Do not share its output. Keep it stable across restarts.
@@ -78,15 +78,23 @@ These steps assume a Linux server with Git, Docker Compose, a TLS reverse proxy,
    ```
 
    The named PostgreSQL volume holds persistent data. Avoid `docker compose down -v`: it deletes that volume. Back up and test restoration of the database and original key.
-5. In a browser visit `https://connector.your-domain.com/health` and `https://connector.your-domain.com/.well-known/oauth-authorization-server`. You should see JSON. Then open `https://connector.your-domain.com/mani_admin`, enter the configured owner email, and use the emailed code in the same browser to create a new connector password. There is no default password. Email delivery must work first.
+5. In a browser visit `https://connector.example.com/health` and `https://connector.example.com/.well-known/oauth-authorization-server`. You should see JSON. Then open `https://connector.example.com/mani_admin`, enter the configured owner email, and use the emailed code in the same browser to create a new connector password. There is no default password. Email delivery must work first.
 6. In your connector's HTTPS settings, add a hosting profile using your cPanel hostname, username, API token and optional token name. The connector validates the credentials before saving. Never enter them in a chat. Use WHM only if deliberately needed: WHM permissions can affect multiple accounts or the server.
-7. Add `https://connector.your-domain.com/mcp` to a compatible remote MCP client using OAuth, sign in to **your own** connector, and review its permissions. For Codex, replace the example domain in:
+7. Add `https://connector.example.com/mcp` to a compatible remote MCP client using OAuth, sign in to **your own** connector, and review its permissions. For Codex, replace the example domain in:
 
    ```sh
-   codex mcp add my_cpanel_remote --url https://connector.your-domain.com/mcp
+   codex mcp add my_cpanel_remote --url https://connector.example.com/mcp
    ```
 
-   Follow the browser login if offered; otherwise use `codex mcp login my_cpanel_remote`. For ChatGPT, use its supported custom MCP flow if available to your account. `/mcp` is a protocol endpoint, not the login page. Start by asking to list connected accounts and domains; grant write scopes only when needed.
+   Follow the browser login if offered; otherwise use `codex mcp login my_cpanel_remote --scopes accounts:read,cpanel:read,offline_access`. Follow the [client-specific instructions](CLIENT-SETUP.md) for ChatGPT and other clients. `/mcp` is a protocol endpoint, not the login page. Start by asking to list connected accounts and domains; grant write scopes only when needed.
+
+## Upload staging and same-server downloads
+
+The supplied Docker configuration sets `PRIVATE_UPLOAD_DIR` and `PRIVATE_PLAY_BUNDLE_DIR` to separate directories under `/tmp`. This tmpfs uses host memory and is cleared when the container restarts; unfinished transfers do not survive. For large transfers, size the available memory/storage appropriately or mount private persistent writable directories and set those variables to their absolute paths. Keep them outside public web roots and distribution archives. cPanel/Passenger deployments can set the same overrides; otherwise cPanel staging uses the application’s private `.private-uploads` directory.
+
+Signed-in browser uploads use `/mani_admin/uploads`. cPanel staging supports up to 1,000,000,000 bytes, one active upload per user, six-hour expiry, 8 MiB browser chunks and 500,000-byte MCP chunks. Browser status allows resume/retry. Your host’s upload, request and disk limits also apply.
+
+Direct browser downloads are disabled by default. They require the connector and target cPanel account to share a server filesystem, plus private values for `LOCAL_DOWNLOAD_ROOT`, `LOCAL_DOWNLOAD_CPANEL_HOST` and `LOCAL_DOWNLOAD_CPANEL_USERNAME`. See [deployment configuration](../deploy/cpanel/README.md#browser-file-transfers). They do not provide arbitrary downloads from other cPanel servers.
 
 ## Troubleshooting and limits
 
@@ -105,3 +113,7 @@ Copy the following, then provide only non-secret details when asked:
 ```text
 Help me set up my own copy of https://github.com/parmtech/parmtech-cpanel-connector using its docs/SELF-HOSTING.md. First help me choose between the local cPanel prototype and the self-hosted OAuth server based on my operating system, client, and infrastructure. Inspect the current repository and check prerequisites before suggesting commands. I want to use my own cPanel host, username and API token, and my own server if I choose remote hosting; do not use the PARMTECH hosted endpoint. Guide me one step at a time, explain changes before making them, and test what can safely be tested. Never ask me to paste a token, password, verification code, encryption key, private configuration, or other secret into chat. Tell me where to enter secrets privately instead. Start with read-only verification, explain alpha limitations and ask before any destructive hosting change.
 ```
+
+## Official hosting references
+
+Use your hosting provider’s API token interface: [cPanel API tokens](https://docs.cpanel.net/cpanel/security/manage-api-tokens-in-cpanel/) or [WHM API tokens and ACLs](https://docs.cpanel.net/whm/development/manage-api-tokens-in-whm/). WHM tokens can have ACL and IP restrictions. The connector cannot exceed the permissions granted by the hosting server.

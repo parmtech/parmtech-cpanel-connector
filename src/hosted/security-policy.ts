@@ -1,4 +1,5 @@
-import type { RequestHandler, Response } from "express";
+import type { Request, RequestHandler, Response } from "express";
+import { ipKeyGenerator } from "express-rate-limit";
 
 export const DEFAULT_CONTENT_SECURITY_POLICY = "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
 
@@ -22,4 +23,17 @@ export function allowOAuthCallback(res: Response, redirectUri: string): void {
   res.setHeader("Content-Security-Policy", DEFAULT_CONTENT_SECURITY_POLICY.replace(
     "form-action 'self'", `form-action 'self' ${callbackOrigin}`,
   ));
+}
+
+/** Describe a missing permission without granting it or invalidating the token. */
+export function insufficientScopeChallenge(origin: string, requiredScope: string | undefined): string {
+  const scope = requiredScope && /^[a-z]+:[a-z]+$/.test(requiredScope) ? requiredScope : "";
+  return `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource/mcp", error="insufficient_scope", ${scope ? `scope="${scope}", ` : ""}error_description="This tool requires the ${scope || "appropriate"} permission"`;
+}
+
+/** Keep authenticated users stable; aggregate fallback IPv6 addresses safely. */
+export function mcpRateLimitKey(req: Request): string {
+  return typeof req.auth?.extra?.userId === "string"
+    ? req.auth.extra.userId
+    : ipKeyGenerator(req.ip ?? "unknown");
 }

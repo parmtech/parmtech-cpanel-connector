@@ -4,7 +4,7 @@ import { Pool } from "pg";
 import nodemailer from "nodemailer";
 import { randomUUID } from "node:crypto";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
+import { hostHeaderValidation } from "@modelcontextprotocol/sdk/server/middleware/hostHeaderValidation.js";
 import { mcpAuthRouter } from "@modelcontextprotocol/sdk/server/auth/router.js";
 import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js";
 import { HostedRepository } from "./repository.js";
@@ -15,10 +15,14 @@ import { UapiClient } from "../uapi.js";
 import { WhmClient } from "../whm.js";
 import type { AccountCredentials } from "../types.js";
 import { publicEgressFetch, resolvePublicHost } from "./outbound.js";
+import { StagedUploadStore } from "./staged-upload.js";
 import { importOwnerConnection } from "./owner-import.js";
 import {renderPage,renderDashboard,renderField,renderHostingForm} from './presentation.js';
 import {setupCodeEmail,profileVerificationEmail} from './email-templates.js';
-import { securityHeaders, allowOAuthCallback } from "./security-policy.js";
+import { securityHeaders, allowOAuthCallback, insufficientScopeChallenge, mcpRateLimitKey } from "./security-policy.js";
+import { installGitHubRoutes } from "../github/routes.js";
+import { installPlayRoutes } from "../play/routes.js";
+import { installUploadRoutes } from "./upload-routes.js";
 
 const baseText = process.env.PUBLIC_BASE_URL;
 if (!baseText) throw new Error("PUBLIC_BASE_URL must be configured for the hosted connector.");
@@ -52,11 +56,16 @@ pool.on("error", () => console.error("An idle database connection closed; subseq
 const repository = new HostedRepository(pool);
 await repository.initialize();
 const oauth = new HostedOAuthProvider(repository, resource, baseUrl);
-const app = createMcpExpressApp({ host: "0.0.0.0", allowedHosts: [baseUrl.host] });
+const app = express();
+app.use(hostHeaderValidation([baseUrl.host]));
+app.use(express.json({ limit: "1mb" }));
 app.disable("x-powered-by");
 app.set("trust proxy", process.env.TRUST_PROXY === "true" ? 1 : false);
 app.use(express.urlencoded({ extended: false, limit: "32kb" }));
 app.use(securityHeaders);
+await installGitHubRoutes(app, repository, baseUrl, getUser);
+await installPlayRoutes(app, repository, baseUrl, getUser);
+installUploadRoutes(app, repository, baseUrl, getUser);
 app.get("/.well-known/oauth-authorization-server", (_req, res) => res.json({
   issuer: issuer.href,
   authorization_endpoint: new URL("/authorize", baseUrl).href,
@@ -80,7 +89,7 @@ app.use(mcpAuthRouter({
 const authBurstLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: true, legacyHeaders: false });
 const registrationLimit = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false });
 const accountLimit = rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
-const mcpLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 600, standardHeaders: true, legacyHeaders: false, keyGenerator: (req) => typeof req.auth?.extra?.userId === "string" ? req.auth.extra.userId : req.ip ?? "unknown" });
+const mcpLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 600, standardHeaders: true, legacyHeaders: false, keyGenerator: mcpRateLimitKey });
 
 type UserSession = { userId: string; email: string; csrf: string };
 function escapeHtml(value: unknown): string {
@@ -174,7 +183,7 @@ app.post('/mani_admin/setup/finish',authBurstLimit,async(req,res)=>{
 app.get("/oauth/approve", async (req, res) => {
   const txId = typeof req.query.tx === "string" ? req.query.tx : "";
   const tx = await repository.getAuthorizationTransaction(txId);
-  if (!tx) return errorPage(res, "Authorization request expired", "This connection request is valid for 10 minutes and can only be used once. Start a new connection from your MCP client; refreshing this old page cannot renew it.", 400);
+  if (!tx || tx.resource !== resource.href) return errorPage(res, "Authorization request expired", "This connection request is valid for 10 minutes and can only be used once. Start a new connection from your MCP client; refreshing this old page cannot renew it.", 400);
   if(!await repository.adminConfigured()){
     res.cookie('parmtech_setup_tx',txId,{httpOnly:true,secure:secureCookie,sameSite:'lax',path:'/',maxAge:15*60*1000});
     return res.redirect(303,'/mani_admin');
@@ -240,7 +249,13 @@ app.post("/profile/login", authBurstLimit, async (req, res) => {
   if (!user || !(await repository.isEmailVerified(user.id))) return errorPage(res, "Sign-in failed", "Check your sign-in details or verify your email first.", 401);
   const session = await repository.createSession(user.id);
   setSession(res, session.cookie);
-  res.redirect(303, "/mani_admin");
+  const githubTx = String(req.body.github_tx ?? "");
+  const pending = githubTx ? await repository.getAuthorizationTransaction(githubTx) : null;
+  const githubResource = new URL("/github/mcp", baseUrl).href;
+  const playTx = String(req.body.play_tx ?? "");
+  const playPending = playTx ? await repository.getAuthorizationTransaction(playTx) : null;
+  const playResource = new URL("/play/mcp", baseUrl).href;
+  res.redirect(303, pending?.resource === githubResource ? `/github/oauth/approve?tx=${encodeURIComponent(githubTx)}` : playPending?.resource === playResource ? `/play/oauth/approve?tx=${encodeURIComponent(playTx)}` : "/mani_admin");
 });
 
 function accountForm(csrf: string, action: string): string {
@@ -252,11 +267,17 @@ app.get(['/mani_admin','/mani_admin/'], async (req, res) => {
   const user = await getUser(req);
   if (!user) {
     const csrf=adminFormCsrf(req,res);
-    return res.type('html').send(page('Admin login',`<p>Sign in using the email and password created during first-time setup. This is not your cPanel password.</p><form method="post" action="/profile/login">${formField('Email','email','email',true,'email')}${formField('Password','password','password',true,'current-password')}<input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button>Sign in</button></form>`));
+    const githubTx = String(req.query.github_tx ?? "");
+    const pending = githubTx ? await repository.getAuthorizationTransaction(githubTx) : null;
+    const githubReturn = pending?.resource === new URL("/github/mcp", baseUrl).href ? `<input type="hidden" name="github_tx" value="${escapeHtml(githubTx)}">` : "";
+    const playTx = String(req.query.play_tx ?? "");
+    const playPending = playTx ? await repository.getAuthorizationTransaction(playTx) : null;
+    const playReturn = playPending?.resource === new URL("/play/mcp", baseUrl).href ? `<input type="hidden" name="play_tx" value="${escapeHtml(playTx)}">` : "";
+    return res.type('html').send(page('Admin login',`<p>Sign in using the email and password created during first-time setup. This is not your cPanel password.</p><form method="post" action="/profile/login">${formField('Email','email','email',true,'email')}${formField('Password','password','password',true,'current-password')}<input type="hidden" name="csrf" value="${escapeHtml(csrf)}">${githubReturn}${playReturn}<button>Sign in</button></form>`));
   }
   const accounts = await repository.listAccounts(user.userId);
   const notice = req.query.disconnected === "1" ? `<p class="notice">Connection disconnected${req.query.revoked === "1" ? " and its remote token was revoked" : ""}.</p>` : "";
-  return res.type("html").send(page('Connection settings',renderDashboard(user,accounts,accountForm(user.csrf,'/accounts/add'),resource.href,notice)));
+  return res.type("html").send(page('Connection settings',renderDashboard(user,accounts,accountForm(user.csrf,'/accounts/add'),resource.href,notice + '<p><a href="/mani_admin/uploads">Upload a large file →</a></p><p><a href="/mani_admin/github">PARMTECH GitHub Connector settings →</a></p><p><a href="/mani_admin/play">PARMTECH Play Console Connector settings →</a></p>')));
 });
 
 app.post("/accounts/add", accountLimit, async (req, res) => {
@@ -325,7 +346,7 @@ app.post("/oauth/consent", async (req, res) => {
   if (!user || !verifyCsrf(user, req.body)) return errorPage(res, "Sign in required", "Sign in again to authorize this connection.", 401);
   const txId = typeof req.body.tx === "string" ? req.body.tx : "";
   const tx = await repository.getAuthorizationTransaction(txId);
-  if (!tx) return errorPage(res, "Authorization request expired", "This connection request is valid for 10 minutes and can only be used once. Start a new connection from your MCP client; refreshing this old page cannot renew it.", 400);
+  if (!tx || tx.resource !== resource.href) return errorPage(res, "Authorization request expired", "This connection request is valid for 10 minutes and can only be used once. Start a new connection from your MCP client; refreshing this old page cannot renew it.", 400);
   if (!(await repository.listAccounts(user.userId)).length) return errorPage(res, "Hosting connection required", "Your sign-in is valid, but no hosting profile is saved for this account. Add a hosting connection in settings, then return to this authorization request.", 409);
   const submitted: string[] = Array.isArray(req.body.scope) ? req.body.scope.map(String) : [String(req.body.scope ?? "")];
   const scopes = [...new Set(submitted.filter((scope) => OAUTH_SCOPES.includes(scope) && tx.scopes.includes(scope)))];
@@ -352,13 +373,13 @@ app.post("/mcp", requireBearerAuth({ verifier: oauth, expectedResource: resource
           : name === "whm_api_read" ? "whm:read"
             : ["cpanel_list_domains", "cpanel_list_email_accounts", "cpanel_list_files"].includes(name) ? "cpanel:read"
               : name === "hosting_disconnect_connection" ? "accounts:write"
-                : ["cpanel_create_email_account", "cpanel_delete_email_account", "cpanel_uapi_execute", "cpanel_disconnect_account"].includes(name) ? "cpanel:write" : ""
+                : ["cpanel_create_email_account", "cpanel_delete_email_account", "cpanel_upload_file", "cpanel_begin_file_upload", "cpanel_append_file_chunk", "cpanel_finish_file_upload", "cpanel_cancel_file_upload", "cpanel_extract_archive", "cpanel_api2_execute", "cpanel_uapi_execute", "cpanel_disconnect_account"].includes(name) ? "cpanel:write" : ""
       : "";
     return !required || !scopes.has(required) ? { id: message?.id ?? null, required } : null;
   }).find(Boolean);
   if (missingScope) {
     const requiredScope = missingScope.required;
-    const challenge = `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource/mcp", error="insufficient_scope", error_description="This tool requires the ${requiredScope || "appropriate"} permission"`;
+    const challenge = insufficientScopeChallenge(origin, requiredScope);
     res.setHeader("WWW-Authenticate", challenge);
     const failure = (id: unknown) => ({
       jsonrpc: "2.0",
@@ -372,7 +393,7 @@ app.post("/mcp", requireBearerAuth({ verifier: oauth, expectedResource: resource
     return res.status(200).json(Array.isArray(req.body) ? messages.map((message: any) => failure(message?.id ?? null)) : failure(missingScope.id));
   }
   const accountStore = await repository.accountStore(userId);
-  const server = createCpanelMcpServer(accountStore, new UapiClient(publicEgressFetch), new WhmClient(publicEgressFetch));
+  const server = createCpanelMcpServer(accountStore, new UapiClient(publicEgressFetch), new WhmClient(publicEgressFetch), { stagedUploads: new StagedUploadStore(userId) });
   try {
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     await server.connect(transport);

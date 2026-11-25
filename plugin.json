@@ -1,14 +1,14 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "parmtech-cpanel-connector",
-  "version": "0.2.0-alpha.3",
-  "description": "Hosted OAuth MCP connector for cPanel\u00c2\u00ae and WHM\u00c2\u00ae hosting accounts. PARMTECH builds custom software and integrations.",
+  "version": "0.2.0-alpha.4",
+  "description": "Self-hosted OAuth MCP connector for cPanel and WHM hosting accounts. PARMTECH builds custom software and integrations.",
   "author": {
     "name": "PARMTECH",
     "url": "https://parmtech.au/"
   },
   "homepage": "https://parmtech.au/",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "keywords": [
     "cpanel",
     "hosting",
@@ -20,7 +20,7 @@
     "com.openai": {
       "interface": {
         "displayName": "PARMTECH cPanel and WHM Connector",
-        "shortDescription": "Manage hosting profiles through PARMTECH's hosted MCP service.",
+        "shortDescription": "Connect your own cPanel or WHM account through your self-hosted MCP server.",
         "longDescription": "Connect cPanel UAPI or WHM API 1 using an API token or supported username/password authentication. Enter credentials only on your secure hosted connection page. Credentials are validated before saving and encrypted in per-user storage. OAuth scopes distinguish cPanel account actions from broader WHM server actions. Built by PARMTECH.",
         "developerName": "PARMTECH",
         "websiteURL": "https://parmtech.au/",

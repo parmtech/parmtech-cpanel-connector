@@ -1,29 +1,35 @@
-# Quick start
+# Quickstart: connect your own hosting
 
-## Create your administrator login
+## 1. Choose an installation
 
-Open **https://connector.parmtech.au/mani_admin** for the PARMTECH installation, or your own connector host followed by `/mani_admin`.
+For a new installation, follow [self-hosting or local setup](SELF-HOSTING.md). For an existing remote installation, use the HTTPS URL supplied by its operator. Examples below use `https://connector.example.com`; replace it with your own connector URL.
 
-On the first visit, enter the owner email configured during installation. The PARMTECH owner's configured address is **info@parmtech.au**. Select **Send verification code**. Keep that browser tab open, retrieve the eight-digit code from your email and enter it with your chosen password and confirmation.
+## 2. Sign in to the connector
 
-There is no default password. After first-time setup, use the same email and your chosen password to sign in. This connector login is separate from your cPanel, mailbox and ChatGPT credentials.
+Open `https://connector.example.com/mani_admin`. On the first installation, use the address configured in `SETUP_OWNER_EMAIL`, request its verification code, and keep the original browser tab open while you enter the code and choose a new connector password. There is no default password.
 
-Codes expire after 15 minutes. Five incorrect attempts exhaust a code. You can request up to three codes per 15 minutes. Complete verification in the browser where you started setup. Never put a password or verification code into chat.
+Later visits use that connector email/password. This login is separate from your cPanel account and your AI client's login. First-admin codes expire after 15 minutes and allow five incorrect attempts; a new request is subject to the setup rate limit.
 
-## Add a hosting connection
+## 3. Add your own cPanel or WHM account
 
-In the workspace, add a label, server hostname, hosting username, account type and API token or supported hosting password. The token value is different from its optional name. Saved secrets are validated and encrypted, and are not displayed again.
+Add a label, hosting server hostname, hosting username, access level and API token. Enter the token value in the masked form; its optional token name is a separate field. The connector validates the credential before encrypting and saving it. Use a dedicated token from your own hosting account. WHM access requires a WHM token and the corresponding privileges.
 
-The PARMTECH installation has an optional one-time migration for its verified owner. Self-hosting users never receive PARMTECH credentials. Intentionally disconnected profiles are not silently re-created.
+## 4. Connect your AI client
 
-## Connect your client
+Use `https://connector.example.com/mcp` with OAuth. Complete connector sign-in and consent. Read the [client setup guide](CLIENT-SETUP.md) for Codex CLI, IDE/desktop, ChatGPT web/Work, cloud limitations, Claude, VS Code and Cursor.
 
-Use the remote MCP endpoint `https://connector.parmtech.au/mcp` for the owner installation, or your own `/mcp` endpoint. Select OAuth in a compatible client, sign in and review the requested permissions. The `/mcp` URL is a protocol endpoint, not a browser login page.
+For Codex:
 
-The hosted service runs independently of your Windows PC. Client sign-in expiration and removal of a saved cPanel credential are separate events. The original local plugin does not switch to the hosted server automatically.
+```sh
+codex mcp add my_hosting --url https://connector.example.com/mcp
+codex mcp login my_hosting --scopes accounts:read,cpanel:read,offline_access
+codex mcp list
+```
 
-## Find everything in the ZIP
+## 5. Verify a read-only operation
 
-Open **START-HERE.html** for the complete English guide. The ZIP includes source, tests, configuration templates and server/plugin packages. It does not include real production passwords, API tokens, database backups or SSL private keys.
+Ask the client to list connected hosting profiles, confirm the intended label/host, then list that cPanel account's domains. For a WHM profile, grant `whm:read` and use `whm_api_read` with `version`.
 
-The current hosted endpoint is owner-restricted. Other users can self-host the MIT-licensed source using their own hosting, domain, database, email and credentials. Publishing source on GitHub does not create a public ChatGPT directory listing.
+A healthy endpoint or successful OAuth login alone does not prove that the hosting credential works. A returned hosting API result completes this check. Authorize write access only for changes you intend to make.
+
+The source package includes code and public configuration examples. It contains no production credentials. The connector's public-source license and a hosted operator's signup policy are separate; another operator's account is not needed when you self-host.

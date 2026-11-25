@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
 import {Pool} from 'pg';
 import {HostedRepository} from '../src/hosted/repository.js';
+import {HostedOAuthProvider} from '../src/hosted/oauth-provider.js';
 
 // Run only with an operator-provided test connection. Every object is created
 // in a new uniquely named schema, never the live public schema.
@@ -38,12 +39,32 @@ try{
  const user=users.find(Boolean)!;
  assert.ok(user.passwordHash.startsWith('scrypt$'));assert.notEqual(user.passwordHash,'Test-only-password-123');
  assert.equal(await repo.isEmailVerified(user.id),true);
+ const oauthClient={client_id:'fixture-session-client',redirect_uris:['https://client.example/callback'],token_endpoint_auth_method:'none' as const};
+ await repo.registerClient(oauthClient);
+ const resource=new URL('https://connector.example/mcp');
+ const noConsent=await repo.createAccessTokens({clientId:oauthClient.client_id,userId:user.id,resource:resource.href,scopes:['cpanel:read']});
+ assert.equal(noConsent.refresh,undefined,'initial issuance requires persistent-access consent');
+ const initial=await repo.createAccessTokens({clientId:oauthClient.client_id,userId:user.id,resource:resource.href,scopes:['cpanel:read','cpanel:write','offline_access']});
+ assert.ok(initial.refresh);
+ const provider=new HostedOAuthProvider(repo,resource,new URL('https://connector.example'));
+ const narrowed=await provider.exchangeRefreshToken(oauthClient,initial.refresh,['cpanel:read'],resource);
+ assert.ok(narrowed.refresh_token,'narrowing API scopes must retain future renewal');
+ assert.equal(narrowed.scope,'cpanel:read');
+ assert.deepEqual((await repo.findToken(narrowed.access_token,'access'))?.scopes,['cpanel:read']);
+ await assert.rejects(provider.exchangeRefreshToken(oauthClient,initial.refresh,['cpanel:read'],resource),/invalid or expired/);
+ await assert.rejects(provider.exchangeRefreshToken(oauthClient,narrowed.refresh_token,['cpanel:write'],resource),/cannot increase/);
+ await assert.rejects(provider.exchangeRefreshToken(oauthClient,narrowed.refresh_token,['cpanel:read'],new URL('https://other.example/mcp')),/does not match/);
+ const raced=await Promise.allSettled([
+  provider.exchangeRefreshToken(oauthClient,narrowed.refresh_token,['cpanel:read'],resource),
+  provider.exchangeRefreshToken(oauthClient,narrowed.refresh_token,['cpanel:read'],resource),
+ ]);
+ assert.equal(raced.filter(result=>result.status==='fulfilled').length,1,'only one concurrent rotation may consume a refresh token');
  await pool.end();pool=new Pool({max:2,options:'-c search_path='+schema});
  const restarted=new HostedRepository(pool);
  assert.ok(await restarted.authenticate(user.email,'Test-only-password-123'));
  assert.equal(await restarted.authenticate(user.email,'wrong-password'),null);
  assert.equal(await restarted.adminConfigured(),true);
- console.log('First-admin PostgreSQL tests passed: browser binding, five-attempt limit, expiry, send throttling, one atomic admin, hashed password and persistent login. No email was sent.');
+ console.log('PostgreSQL checks passed: setup browser binding, attempt/expiry limits, atomic admin creation, persistent login, consent-bound refresh issuance, narrowed renewal, replay/wrong-resource/scope-escalation rejection and atomic refresh rotation. No email was sent.');
 }finally{
  if(pool)await pool.end();
  if(created)await base.query('DROP SCHEMA "'+schema+'" CASCADE');

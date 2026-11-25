@@ -19,7 +19,7 @@ function loadConfiguration(filename, appRoot = __dirname, environment = process.
   }
   if (Buffer.from(config.CREDENTIAL_ENCRYPTION_KEY, 'base64').length !== 32) throw new Error('Private encryption key must be 32 bytes.');
   // Persistent configuration owns credentials. Passenger owns its runtime PORT.
-  const allowed = new Set(['PUBLIC_BASE_URL','CREDENTIAL_ENCRYPTION_KEY','PGHOST','PGPORT','PGDATABASE','PGUSER','PGPASSWORD','PG_SSL','TRUST_PROXY','SMTP_HOST','SMTP_PORT','SMTP_SECURE','SMTP_REQUIRE_TLS','SMTP_USER','SMTP_PASSWORD','MAIL_FROM','MAIL_TRANSPORT','REGISTRATION_ALLOWED_EMAILS','OWNER_CONNECTION_IMPORT_FILE','OWNER_CONNECTION_EMAIL','SETUP_OWNER_EMAIL','COMPANY_SITE_URL','CPANEL_DNS_ZONE']);
+  const allowed = new Set(['PUBLIC_BASE_URL','CREDENTIAL_ENCRYPTION_KEY','PGHOST','PGPORT','PGDATABASE','PGUSER','PGPASSWORD','PG_SSL','TRUST_PROXY','SMTP_HOST','SMTP_PORT','SMTP_SECURE','SMTP_REQUIRE_TLS','SMTP_USER','SMTP_PASSWORD','MAIL_FROM','MAIL_TRANSPORT','REGISTRATION_ALLOWED_EMAILS','OWNER_CONNECTION_IMPORT_FILE','OWNER_CONNECTION_EMAIL','SETUP_OWNER_EMAIL','COMPANY_SITE_URL','CPANEL_DNS_ZONE','PRIVATE_UPLOAD_DIR','PRIVATE_PLAY_BUNDLE_DIR','LOCAL_DOWNLOAD_ROOT','LOCAL_DOWNLOAD_CPANEL_HOST','LOCAL_DOWNLOAD_CPANEL_USERNAME']);
   for (const [key, value] of Object.entries(config)) {
     if (!allowed.has(key) || typeof value !== 'string') throw new Error('Unexpected private configuration setting.');
     environment[key] = value;

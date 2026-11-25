@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.0-alpha.4 — 25 November 2026
+
+- Reconcile the public TypeScript source with the deployed connector's OAuth scope challenges, IPv6 rate limiting and persistent session renewal.
+- Bring the existing GitHub and Play Console integrations into the main source tree, including verified binary AAB upload support.
+- Include the deployed resumable cPanel upload workflow: files up to 1 GB, six-hour staging, browser chunks and private per-user staging.
+- Replace deployment-specific direct-download paths and hosting identity with optional operator configuration; keep private credentials outside source and distributions.
+- Keep Docker's application filesystem read-only while placing temporary transfer staging in explicitly configured writable directories.
+- Align source, package, plugin and MCP version metadata; strengthen distribution privacy checks and regression coverage.
+- Update independent self-hosting and client guides for Codex surfaces, ChatGPT, Claude, VS Code, Cursor and compatible MCP clients, with documented verification limits.
+
+The private app-wrapper version is separate from this public source version. The password-recovery/key-rotation development branch is not part of this source reconciliation.
+
 ## 0.2.0-alpha.3 — 13 November 2026
 
 - Standardize connector setup, profile verification, interface copy and current documentation in English.

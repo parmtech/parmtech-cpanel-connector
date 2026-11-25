@@ -4,7 +4,7 @@
 
 Connect a compatible AI or MCP client to **your own cPanel account** with software you run yourself. Choose a local setup for your computer or host your own remote OAuth server.
 
-**[Read the setup guide →](SELF-HOSTING.md)** &nbsp; · &nbsp; **[Copy the AI assistant prompt →](SELF-HOSTING.md#copyable-prompt-for-your-ai-assistant)** &nbsp; · &nbsp; [Troubleshooting](SELF-HOSTING.md#troubleshooting-and-limits)
+**[Read the setup guide →](SELF-HOSTING.md)** &nbsp; · &nbsp; **[Copy the AI assistant prompt →](SELF-HOSTING.md#copyable-prompt-for-your-ai-assistant)** &nbsp; · &nbsp; [Client setup](CLIENT-SETUP.md) · [Troubleshooting](SELF-HOSTING.md#troubleshooting-and-limits)
 
 > [!IMPORTANT]
 > This project is **alpha software**. PARMTECH's hosted endpoint is owner-restricted; setting up your own connector does not use it. Client support and availability vary.
