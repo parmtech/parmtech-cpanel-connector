@@ -22,6 +22,54 @@ export const uiStyles=`
 @media(max-width:1050px){.dashboard-grid{grid-template-columns:1fr}.workspace{grid-template-columns:190px minmax(0,1fr)}.account-session{align-items:flex-end;flex-direction:column;gap:6px}}
 @media(max-width:760px){.auth-page{padding:18px 12px;align-items:start}.auth-shell{display:block;border-radius:17px}.brand-panel{padding:22px 24px}.brand-copy,.feature-list,.brand-panel .panel-foot{display:none}.auth-content{padding:28px 24px}.breadcrumb{margin-bottom:20px}.workspace{display:block}.sidebar{padding:18px 20px;display:block}.sidebar .brand{margin:0;padding:0}.sidebar nav,.sidebar .nav-label,.sidebar .panel-foot{display:none}.workspace-main{padding:25px 18px}.workspace-header{align-items:flex-start}.workspace-header h1{font-size:25px}.account-session{max-width:160px;text-align:right;overflow-wrap:anywhere}.metrics{gap:8px}.metric{padding:14px 12px}.metric strong{font-size:24px}.metric span{font-size:9px}.card{padding:20px}.form-grid{grid-template-columns:1fr}.form-grid .full{grid-column:auto}.stepper{gap:5px}.stepper span{font-size:9px}h1{letter-spacing:-.6px}}
 input[type=hidden]{display:none!important}
+
+/* 2026-11 UX audit: keep navigation and form controls usable on small screens. */
+:root{--muted:#526176}
+body{font-size:16px}
+.skip-link{position:absolute;left:16px;top:12px;z-index:20;padding:12px 16px;background:#fff;color:#17253a;border:2px solid #176b73;border-radius:8px;transform:translateY(-180%)}
+.skip-link:focus{transform:none}
+main:focus{outline:none}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline-color:#176b73}
+.sidebar a:focus-visible,.brand-panel a:focus-visible{outline-color:#a8e6d4}
+
+label,.helper,.card>p,.empty-state p,.connection-details,.connection-top small,.foot{font-size:14px}
+input:not([type=checkbox]),select{font-size:16px;min-height:48px}
+.breadcrumb,.auth-footer{font-size:13px;color:#526176}
+.eyebrow{font-size:11px}
+.metric p,.metric span,.badge{font-size:12px}
+.metric span{color:#526176}
+.sidebar nav a{font-size:14px}
+.connection-card label{font-size:13px}
+.button-danger,.account-session button{min-height:44px;font-size:13px}
+.account-session{font-size:13px}
+.connection-top>div:nth-child(2){min-width:0;overflow-wrap:anywhere}
+.section-heading{gap:12px;flex-wrap:wrap}
+.stepper{flex-wrap:wrap;row-gap:10px;color:#526176}
+.stepper span{font-size:12px;white-space:normal}
+.stepper b{flex-shrink:0}
+#client-setup{scroll-margin-top:24px}
+@media(max-width:760px){
+ .sidebar nav{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+ .sidebar nav a{display:flex;align-items:center;margin:0;min-height:44px;padding:10px 12px}
+ .sidebar .nav-label,.sidebar .panel-foot{display:none}
+ .workspace-header{flex-wrap:wrap}
+ .workspace-header>div:first-child{min-width:0;flex:1 1 220px}
+ .account-session{max-width:100%;align-items:flex-start;text-align:left;flex-direction:row;flex-wrap:wrap;gap:12px}
+ .stepper span{font-size:12px}
+}
+@media(max-width:480px){
+ .auth-content{padding:24px 20px}
+ .metrics{grid-template-columns:1fr}
+ .metric{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;padding:14px 16px}
+ .metric p{margin:0;align-self:center}
+ .metric strong{grid-column:2;grid-row:1/3}
+ .metric span{margin-top:2px}
+ .connection-top{flex-wrap:wrap}
+ .connection-details{grid-template-columns:1fr;gap:2px}
+ .connection-details dd{margin-bottom:10px}
+}
+
+
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 `;
 
@@ -31,9 +79,9 @@ export function renderPage(title:string,body:string,options:{local?:boolean}={})
  const setup=title==='First-time admin setup'||verify;
  const brand=`<div class="brand">${mark}<span>PARMTECH<small>HOSTING CONNECTOR</small></span></div>`;
  const footer='<a href="https://parmtech.au/" target="_blank" rel="noreferrer">parmtech.au</a> · Independent cPanel &amp; WHM integration';
- const content=dashboard?`<div class="workspace"><aside class="sidebar">${brand}<p class="nav-label">Workspace</p><nav aria-label="Workspace"><a class="active" href="/mani_admin" aria-current="page">Hosting connections</a><a href="#client-setup">Connect an MCP client</a><a href="https://github.com/parmtech/parmtech-cpanel-connector/blob/main/docs/COMPLETE-GUIDE.md" target="_blank" rel="noreferrer">Documentation ↗</a></nav><div class="panel-foot">Your credentials. Your control.<br>${footer}</div></aside><main id="main-content" class="workspace-main">${body}</main></div>`:
- `<div class="auth-page"><div class="auth-shell"><aside class="brand-panel">${brand}<div class="brand-copy"><h2>Your hosting.<br>Connected, securely.</h2><p>${options.local?'Set up a private connection on this computer and keep your credentials in your operating system vault.':'One workspace for your hosting connections. Built for clear permissions and secure remote access.'}</p></div><ul class="feature-list"><li>Protected credential storage</li><li>Clear, scoped permissions</li><li>${options.local?'Private local setup':'No always-on PC required'}</li></ul><div class="panel-foot">${footer}</div></aside><main id="main-content" class="auth-content"><div class="breadcrumb">${options.local?'LOCAL CONNECTION':'HOSTING WORKSPACE'} / ${setup?'GET STARTED':'ACCOUNT ACCESS'}</div>${setup?`<div class="stepper" aria-label="Setup progress"><span class="${verify?'':'current'}"><b>1</b>Owner email</span><i></i><span class="${verify?'current':''}"><b>2</b>Verify &amp; secure</span><i></i><span><b>3</b>Ready</span></div>`:''}<p class="eyebrow">${setup?'One-time administrator setup':options.local?'On this computer':'Private administrator access'}</p><h1>${escapeHtml(title)}</h1>${body}<div class="auth-footer">${options.local?'Local connection setup. Your token stays out of chat.':'Your connector login is separate from your hosting credentials.'}</div></main></div></div>`;
- return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${escapeHtml(title)} · PARMTECH</title><style>${uiStyles}</style></head><body>${content}</body></html>`;
+ const content=dashboard?`<div class="workspace"><aside class="sidebar">${brand}<p class="nav-label">Workspace</p><nav aria-label="Workspace"><a class="active" href="/mani_admin" aria-current="page">Hosting connections</a><a href="#client-setup">Connect an MCP client</a><a href="https://github.com/parmtech/parmtech-cpanel-connector/blob/main/docs/COMPLETE-GUIDE.md" target="_blank" rel="noreferrer">Documentation ↗</a></nav><div class="panel-foot">Your credentials. Your control.<br>${footer}</div></aside><main id="main-content" tabindex="-1" class="workspace-main">${body}</main></div>`:
+ `<div class="auth-page"><div class="auth-shell"><aside class="brand-panel">${brand}<div class="brand-copy"><h2>Your hosting.<br>Connected, securely.</h2><p>${options.local?'Set up a private connection on this computer and keep your credentials in your operating system vault.':'One workspace for your hosting connections. Built for clear permissions and secure remote access.'}</p></div><ul class="feature-list"><li>Protected credential storage</li><li>Clear, scoped permissions</li><li>${options.local?'Private local setup':'No always-on PC required'}</li></ul><div class="panel-foot">${footer}</div></aside><main id="main-content" tabindex="-1" class="auth-content"><div class="breadcrumb">${options.local?'LOCAL CONNECTION':'HOSTING WORKSPACE'} / ${setup?'GET STARTED':'ACCOUNT ACCESS'}</div>${setup?`<div class="stepper" aria-label="Setup progress"><span class="${verify?'':'current'}"><b>1</b>Owner email</span><i></i><span class="${verify?'current':''}"><b>2</b>Verify &amp; secure</span><i></i><span><b>3</b>Ready</span></div>`:''}<p class="eyebrow">${setup?'One-time administrator setup':options.local?'On this computer':'Private administrator access'}</p><h1>${escapeHtml(title)}</h1>${body}<div class="auth-footer">${options.local?'Local connection setup. Your token stays out of chat.':'Your connector login is separate from your hosting credentials.'}</div></main></div></div>`;
+ return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><meta name="robots" content="noindex,nofollow"><title>${escapeHtml(title)} · PARMTECH</title><style>${uiStyles}</style></head><body><a class="skip-link" href="#main-content">Skip to content</a>${content}</body></html>`;
 }
 
 export function renderDashboard(user:{email:string;csrf:string},accounts:AccountMetadata[],form:string,endpoint:string,notice=''):string {
